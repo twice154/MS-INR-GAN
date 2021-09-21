@@ -45,9 +45,7 @@ def G_arch(ch=64, attention='64', ksize='333333', dilation='111111'):
   arch[64]  = {'in_channels' :  [ch * item for item in [8, 8, 8, 8, 8]],
                'out_channels' : [ch * item for item in [8, 8, 8, 8, 8]],
                'upsample' : [False] * 5,
-               'spatial_upsample' : [False, True, True, True, True],  # start from 4
                'resolution' : [64, 64, 64, 64, 64],
-               'spatial_resolution' : [4, 8, 16, 32, 64],
                'attention' : {}}
   arch[32]  = {'in_channels' :  [ch * item for item in [4, 4, 4]],
                'out_channels' : [ch * item for item in [4, 4, 4]],
@@ -188,32 +186,6 @@ class Generator(nn.Module):
                                     self.activation,
                                     self.which_conv(self.arch['out_channels'][-1], 3))
 
-
-    # Prepare spatial modulation model
-    # If not using shared embeddings, self.shared is just a passthrough
-    self.spatial_modulation_shared = (self.which_embedding(n_classes, self.shared_dim))
-    # First linear layer
-    self.spatial_modulation_linear = self.which_linear(self.dim_z + self.shared_dim,
-                                     self.arch['in_channels'][0] * (self.bottom_width **2))
-
-    # self.blocks is a doubly-nested list of modules, the outer loop intended
-    # to be over blocks at a given resolution (resblocks and/or self-attention)
-    # while the inner loop is over a given block
-    self.spatial_modulation_blocks = []
-    for index in range(len(self.arch['out_channels'])):
-      self.spatial_modulation_blocks += [[layers.SpatialModulationGBlock(in_channels=self.arch['in_channels'][index],
-                             out_channels=self.arch['out_channels'][index],
-                             which_conv=self.which_conv,
-                             which_bn=self.which_bn,
-                             activation=self.activation,
-                             upsample=(functools.partial(F.interpolate, scale_factor=2)
-                                       if self.arch['spatial_upsample'][index] else None),
-                             spatial_upsample=(functools.partial(F.interpolate, scale_factor=int(self.arch['resolution'][index] / self.arch['spatial_resolution'][index]))
-                                       ))]]
-
-    # Turn self.blocks into a ModuleList so that it's all properly registered.
-    self.spatial_modulation_blocks = nn.ModuleList([nn.ModuleList(block) for block in self.spatial_modulation_blocks])
-
     # Initialize weights. Optionally skip init for testing.
     if not skip_init:
       self.init_weights()
@@ -271,14 +243,6 @@ class Generator(nn.Module):
   # interpolation later. If we passed in the one-hot and then ran it through
   # G.shared in this forward function, it would be harder to handle.
   def forward(self, z, y):
-    # Below is for Spatial Self-modulation
-    # Class embedding layer
-    # spatial_c = self.spatial_modulation_shared(y)
-    # Mixing layer
-    spatial_h = self.spatial_modulation_linear(torch.cat([y, z], 1))
-    # Reshape
-    spatial_h = spatial_h.view(spatial_h.size(0), -1, self.bottom_width, self.bottom_width)
-
     # If hierarchical, concatenate zs and ys
     if self.hier:
       zs = torch.split(z, self.z_chunk_size, 1)
@@ -310,23 +274,9 @@ class Generator(nn.Module):
     
     # Loop over blocks
     for index, blocklist in enumerate(self.blocks):
-      # Spatial modulation calculation
-      spatial_h, spatial_self_a_mod, spatial_self_b_mod = self.spatial_modulation_blocks[index][0](spatial_h)
       # Second inner loop in case block has multiple layers
       for block in blocklist:
         h = block(h, ys[index])
-      # Resize & Select Proper Spatial Self-modulation Region
-      # Resize
-      # upscale_rate = int(h.shape[3] / spatial_h.shape[3])  # **2 when pixelshuffle
-      # spatial_self_a_mod = torch.cat([spatial_self_a_mod[:, ch, :, :].reshape(spatial_self_a_mod.shape[0], -1, spatial_self_a_mod.shape[2], spatial_self_a_mod.shape[3]).repeat(1, upscale_rate * upscale_rate, 1, 1) for ch in range(spatial_self_a_mod.shape[1])], dim=1)
-      # spatial_self_b_mod = torch.cat([spatial_self_b_mod[:, ch, :, :].reshape(spatial_self_b_mod.shape[0], -1, spatial_self_b_mod.shape[2], spatial_self_b_mod.shape[3]).repeat(1, upscale_rate * upscale_rate, 1, 1) for ch in range(spatial_self_b_mod.shape[1])], dim=1)
-      # spatial_self_a_mod = nn.PixelShuffle(upscale_rate)(spatial_self_a_mod)
-      # spatial_self_b_mod = nn.PixelShuffle(upscale_rate)(spatial_self_b_mod)
-      # Select
-      #
-      # Spatial Self-modulation
-      h = (h - torch.mean(h, dim=(1, 2, 3), keepdim=True)) / (torch.std(h, dim=(1, 2, 3), keepdim=True) + 1e-10)
-      h = h * (1 + spatial_self_a_mod) + spatial_self_b_mod
         
     # Apply batchnorm-relu-conv-tanh at output
     return torch.tanh(self.output_layer(h))
