@@ -1,0 +1,13 @@
+generator:
+  upsampling_mode: ~
+  use_noise: true
+
+  input:
+    type: "const"
+    resolution: 4
+
+  coords: {enabled: false}
+  fmm: {enabled: false}
+
+loss_kwargs:
+  r1_gamma: 10.0
