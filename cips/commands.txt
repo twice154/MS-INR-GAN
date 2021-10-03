@@ -1,0 +1,3 @@
+2021.10.03
+python prepare_data.py images /SSD/MS-INR-GAN/data/celeba_hq/ --out /SSD/MS-INR-GAN/data/celeb-hq-lmdb --n_worker 8 --size 256
+CUDA_VISIBLE_DEVICES=0 python train.py --n_sample=8 --batch=4 --fid_batch=8 --Generator=CIPSskip --output_dir=skip-ffhq --img2dis --num_workers=16 /SSD/MS-INR-GAN/data/celeba_hq_lmdb/256
