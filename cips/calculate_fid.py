@@ -15,6 +15,7 @@ from tensor_transforms import convert_to_coord_format
 def calculate_fid(model, fid_dataset, bs, size, num_batches, latent_size, integer_values,
                   save_dir='fid_imgs', device='cuda'):
     coords = convert_to_coord_format(bs, size, size, device, integer_values=integer_values)
+    print("generate fid samples...")
     for i in range(num_batches):
         z = torch.randn(bs, latent_size, device=device)
         fake_img, _ = model(coords, [z])
@@ -22,9 +23,10 @@ def calculate_fid(model, fid_dataset, bs, size, num_batches, latent_size, intege
             torchvision.utils.save_image(fake_img[j, :, :, :],
                                          os.path.join(save_dir, '%s.png' % str(i * bs + j).zfill(5)), range=(-1, 1),
                                          normalize=True)
-    metrics_dict = calculate_metrics(save_dir, fid_dataset, cuda=True, isc=False, fid=True, kid=False, verbose=False)
+    print("calculate fid...")
+    metrics_dict = calculate_metrics(input1=save_dir, input2=fid_dataset, cuda=True, isc=False, fid=True, kid=False, verbose=False)
     return metrics_dict
-
+    
 
 if __name__ == '__main__':
 

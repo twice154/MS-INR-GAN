@@ -1,0 +1,18 @@
+2021.10.04
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb --n_worker 8 --size 64
+
+CUDA_VISIBLE_DEVICES=0 python train.py /home/MS-INR-GAN/data/celeba_hq_lmdb/64 --output_dir=skip_celeba_hq_ss_full \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=64 --num_workers=16 --crop=64 --coords_size=64 \
+--Generator=CIPSskip --size=64 --fc_dim=32 --latent=32 --n_mlp=5 \
+--img2dis
+
+CUDA_VISIBLE_DEVICES=1 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb --n_worker 8 --size 16
+
+CUDA_VISIBLE_DEVICES=1 python train_4x.py /home/MS-INR-GAN/data/celeba_hq_lmdb/16 /home/MS-INR-GAN/data/celeba_hq_lmdb/64 --output_dir=skip_celeba_hq_ss_4x \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=64 --num_workers=16 --crop=16 --coords_size=16 \
+--Generator=CIPSskip --size=16 --fc_dim=32 --latent=32 --n_mlp=5 \
+--img2dis

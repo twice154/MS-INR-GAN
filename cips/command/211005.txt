@@ -1,0 +1,14 @@
+2021.10.05
+CUDA_VISIBLE_DEVICES=1 python train_patch.py /home/MS-INR-GAN/data/celeba_hq_lmdb/64 --output_dir=skip_celeba_hq_ss_patch \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=32 --latent=32 --n_mlp=5 \
+--Discriminator=DiscriminatorCoordinate --img2dis
+
+CUDA_VISIBLE_DEVICES=1 python train_double_scale.py /home/MS-INR-GAN/data/celeba_hq_lmdb/64 /home/MS-INR-GAN/data/celeba_hq_lmdb/16 --output_dir=skip_celeba_hq_ms \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=32 --latent=32 --n_mlp=5 \
+--Discriminator=DiscriminatorCoordinate --CoarseDiscriminator=Discriminator --img2dis

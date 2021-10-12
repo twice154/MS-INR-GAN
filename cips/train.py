@@ -19,6 +19,12 @@ from calculate_fid import calculate_fid
 from distributed import get_rank, synchronize, reduce_loss_dict
 from tensor_transforms import convert_to_coord_format
 
+try:
+    import nsml
+    from nsml import DATASET_PATH, SESSION_NAME
+except ImportError:
+    nsml = None
+
 
 def data_sampler(dataset, shuffle, distributed):
     if distributed:
@@ -89,7 +95,7 @@ def mixing_noise(batch, latent_dim, prob, device):
         return [make_noise(batch, latent_dim, 1, device)]
 
 
-def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, device):
+def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, device, fid_dataset):
     loader = sample_data(loader)
 
     pbar = range(args.iter)
@@ -206,14 +212,25 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
             )
 
             if i % 100 == 0:
-                writer.add_scalar("Generator", g_loss_val, i)
-                writer.add_scalar("Discriminator", d_loss_val, i)
-                writer.add_scalar("R1", r1_val, i)
-                writer.add_scalar("Path Length Regularization", path_loss_val, i)
-                writer.add_scalar("Mean Path Length", mean_path_length, i)
-                writer.add_scalar("Real Score", real_score_val, i)
-                writer.add_scalar("Fake Score", fake_score_val, i)
-                writer.add_scalar("Path Length", path_length_val, i)
+                if nsml:
+                    nsml.report(summary=True, step=i,
+                    Generator=g_loss_val,
+                    Discriminator=d_loss_val,
+                    R1=r1_val,
+                    PathLengthRegularization=path_loss_val,
+                    MeanPathLength=mean_path_length,
+                    RealScore=real_score_val,
+                    FakeScore=fake_score_val,
+                    PathLength=path_length_val)
+                else:
+                    writer.add_scalar("Generator", g_loss_val, i)
+                    writer.add_scalar("Discriminator", d_loss_val, i)
+                    writer.add_scalar("R1", r1_val, i)
+                    writer.add_scalar("Path Length Regularization", path_loss_val, i)
+                    writer.add_scalar("Mean Path Length", mean_path_length, i)
+                    writer.add_scalar("Real Score", real_score_val, i)
+                    writer.add_scalar("Fake Score", fake_score_val, i)
+                    writer.add_scalar("Path Length", path_length_val, i)
 
             if i % 500 == 0:
                 with torch.no_grad():
@@ -277,7 +294,10 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
                     cur_metrics = calculate_fid(g_ema, fid_dataset=fid_dataset, bs=args.fid_batch, size=args.coords_size,
                                                 num_batches=args.fid_samples//args.fid_batch, latent_size=args.latent,
                                                 save_dir=args.path_fid, integer_values=args.coords_integer_values)
-                    writer.add_scalar("fid", cur_metrics['frechet_inception_distance'], i)
+                    if nsml:
+                        nsml.report(summary=True, step=i, fid=cur_metrics['frechet_inception_distance'])
+                    else:
+                        writer.add_scalar("fid", cur_metrics['frechet_inception_distance'], i)
                     print(i, "fid",  cur_metrics['frechet_inception_distance'])
 
 
@@ -320,6 +340,7 @@ if __name__ == '__main__':
     parser.add_argument('--channel_multiplier', type=int, default=2)
     parser.add_argument('--mixing', type=float, default=0.)
     parser.add_argument('--g_reg_every', type=int, default=4)
+    parser.add_argument('--n_mlp', type=int, default=8)
 
     # Discriminator params
     parser.add_argument('--Discriminator', type=str, default='Discriminator')
@@ -351,7 +372,7 @@ if __name__ == '__main__':
         torch.distributed.init_process_group(backend='nccl', init_method='env://')
         synchronize()
 
-    args.n_mlp = 8
+    # args.n_mlp = 8
     args.dis_input_size = 3 if args.img2dis else 5
     print('img2dis', args.img2dis, 'dis_input_size', args.dis_input_size)
 
@@ -436,6 +457,10 @@ if __name__ == '__main__':
                                        transforms.ToTensor(),
                                        transforms.Lambda(lambda x: x.mul_(255.).byte())])
 
+    if nsml:
+        args.path = os.path.join(DATASET_PATH, 'train', args.path.split('/')[-1])
+    else:
+        pass
     dataset = MultiScaleDataset(args.path, transform=transform, resolution=args.coords_size, crop_size=args.crop,
                                 integer_values=args.coords_integer_values, to_crop=args.to_crop)
     fid_dataset = ImageDataset(args.path, transform=transform_fid, resolution=args.coords_size, to_crop=args.to_crop)
@@ -451,4 +476,4 @@ if __name__ == '__main__':
 
     writer = SummaryWriter(log_dir=args.logdir)
 
-    train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, device)
+    train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, device, fid_dataset)

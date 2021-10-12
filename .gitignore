@@ -1,1 +1,6 @@
 data/
+
+# generated logs in cips
+cips/fid/
+cips/outputs/
+cips/tensorboard/

@@ -1,0 +1,10 @@
+2021.10.07
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb --n_worker 8 --size 8
+
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb --n_worker 8 --size 32
+
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb --n_worker 8 --size 128
+
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb --n_worker 8 --size 512
+
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb --n_worker 8 --size 1024

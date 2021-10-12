@@ -1,0 +1,18 @@
+2021.10.08
+nsml run -d celeba_hq_lmdb -g 1 --memory "16G" --shm-size "8GB" --cpus 8 -e "train.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb/64 --output_dir=skip_celeba_hq_ss_full \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=64 --num_workers=16 --crop=64 --coords_size=64 \
+--Generator=CIPSskip --size=64 --fc_dim=32 --latent=32 --n_mlp=5 \
+--img2dis" \
+-m "nsml_test" --gpu-driver-version "410.72" --gpu-model "P40"
+
+nsml run -d celeba_hq_lmdb -g 1 --memory "16G" --shm-size "8GB" --cpus 8 -e "train.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb/64 --output_dir=skip_celeba_hq_ss_full \
+--fid_samples=100 --fid_batch=16 \
+--iter=120 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=20 \
+--batch=64 --num_workers=16 --crop=64 --coords_size=64 \
+--Generator=CIPSskip --size=64 --fc_dim=32 --latent=32 --n_mlp=5 \
+--img2dis" \
+-m "nsml_image_save_test" --gpu-driver-version "418" --gpu-model "P40"
