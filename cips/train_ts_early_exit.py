@@ -238,7 +238,7 @@ def train(args, loader, coarse_loader, triple_loader, generator, discriminator, 
 
         noise = mixing_noise(args.batch, args.latent, args.mixing, device)
 
-        fake_img, _ = generator(converted, noise)
+        fake_img, _ = generator(converted, noise, early_exit=True)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
         fake_pred = coarse_discriminator(fake, key)
 
@@ -281,7 +281,7 @@ def train(args, loader, coarse_loader, triple_loader, generator, discriminator, 
 
         noise = mixing_noise(args.batch, args.latent, args.mixing, device)
 
-        fake_img, _ = generator(converted, noise)
+        fake_img, _ = generator(converted, noise, early_exit=True)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
         fake_pred = coarse_discriminator(fake, key)
         g_loss = g_nonsaturating_loss(fake_pred)
@@ -311,7 +311,7 @@ def train(args, loader, coarse_loader, triple_loader, generator, discriminator, 
 
         noise = mixing_noise(args.batch, args.latent, args.mixing, device)
 
-        fake_img, _ = generator(converted, noise)
+        fake_img, _ = generator(converted, noise, second_exit=True)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
         fake_pred, fake_pred_coord_h, fake_pred_coord_w = triple_discriminator(fake, key)
 
@@ -364,7 +364,7 @@ def train(args, loader, coarse_loader, triple_loader, generator, discriminator, 
 
         noise = mixing_noise(args.batch, args.latent, args.mixing, device)
 
-        fake_img, _ = generator(converted, noise)
+        fake_img, _ = generator(converted, noise, second_exit=True)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
         fake_pred, fake_pred_coord_h, fake_pred_coord_w = triple_discriminator(fake, key)
         g_loss_main = g_nonsaturating_loss(fake_pred)
@@ -554,11 +554,11 @@ def train(args, loader, coarse_loader, triple_loader, generator, discriminator, 
                                                                  integer_values=args.coords_integer_values)
                         samples = []
                         for sz in sample_z:
-                            sample, _ = g_ema(converted_full, [sz.unsqueeze(0)])
+                            sample, _ = g_ema(converted_full, [sz.unsqueeze(0)], early_exit=True)
                             samples.append(sample)
                         sample = torch.cat(samples, 0)
                     else:
-                        sample, _ = g_ema(converted_full, [sample_z])
+                        sample, _ = g_ema(converted_full, [sample_z], early_exit=True)
 
                     utils.save_image(
                         sample,

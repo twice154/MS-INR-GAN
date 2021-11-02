@@ -15,10 +15,10 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 import model
-from dataset import MultiScaleDataset, ImageDataset
-from calculate_fid import calculate_fid, calculate_fid_ddp
+from dataset import MultiScaleDataset, ImageDataset, MultiScaleMipDataset, MultiScalePatchMipDataset
+from calculate_fid import calculate_fid, calculate_fid_ddp, calculate_fid_ddp_mip
 from distributed import get_rank, synchronize, reduce_loss_dict
-from tensor_transforms import convert_to_coord_format
+from tensor_transforms import convert_to_coord_format, convert_to_coord_format_mip
 
 try:
     import nsml
@@ -96,8 +96,10 @@ def mixing_noise(batch, latent_dim, prob, device):
         return [make_noise(batch, latent_dim, 1, device)]
 
 
-def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, device, fid_dataset, n_scales, writer, path):
+def train(args, loader, loader_2x, loader_4x, generator, discriminator, discriminator_2x, discriminator_4x, g_optim, d_optim, d_optim_2x, d_optim_4x, g_ema, device, fid_dataset, n_scales, writer, path):
     loader = sample_data(loader)
+    loader_2x = sample_data(loader_2x)
+    loader_4x = sample_data(loader_4x)
 
     pbar = range(args.iter)
 
@@ -115,10 +117,14 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
     if args.distributed:
         g_module = generator.module
         d_module = discriminator.module
+        d_module_2x = discriminator_2x.module
+        d_module_4x = discriminator_4x.module
 
     else:
         g_module = generator
         d_module = discriminator
+        d_module_2x = discriminator_2x
+        d_module_4x = discriminator_4x
         
     accum = 0.5 ** (32 / (10 * 1000))
 
@@ -132,77 +138,228 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
 
             break
 
-        data = next(loader)
-        key = np.random.randint(n_scales)
-        real_stack = data[key].to(device)
+        ####################################################################################################
+        portion_selector = random.randrange(1, args.portion_1x + args.portion_2x + args.portion_4x)
 
-        real_img, converted = real_stack[:, :3], real_stack[:, 3:]
+        if portion_selector <= args.portion_1x:
+            data = next(loader)
+            key = np.random.randint(n_scales)
+            real_stack = data[key].to(device)
 
-        requires_grad(generator, False)
-        requires_grad(discriminator, True)
+            real_img, converted = real_stack[:, :3], real_stack[:, 3:]
 
-        noise = mixing_noise(args.batch, args.latent, args.mixing, device)
+            requires_grad(generator, False)
+            requires_grad(discriminator, True)
 
-        fake_img, _ = generator(converted, noise)
-        fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
-        fake_pred = discriminator(fake, key)
+            noise = mixing_noise(args.batch, args.latent, args.mixing, device)
 
-        real = real_img if args.img2dis else real_stack
-        real_pred = discriminator(real, key)
-        d_loss = d_logistic_loss(real_pred, fake_pred)
+            fake_img, _ = generator(converted, noise)
+            fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
+            fake_pred = discriminator(fake, key)
 
-        loss_dict['d'] = d_loss
-        loss_dict['real_score'] = real_pred.mean()
-        loss_dict['fake_score'] = fake_pred.mean()
-
-        discriminator.zero_grad()
-        d_loss.backward()
-        d_optim.step()
-
-        d_regularize = i % args.d_reg_every == 0
-
-        if d_regularize:
-            real.requires_grad = True
+            real = real_img if args.img2dis else real_stack
             real_pred = discriminator(real, key)
-            r1_loss = d_r1_loss(real_pred, real)
+            d_loss = d_logistic_loss(real_pred, fake_pred)
+
+            loss_dict['d'] = d_loss
+            loss_dict['real_score'] = real_pred.mean()
+            loss_dict['fake_score'] = fake_pred.mean()
 
             discriminator.zero_grad()
-            (args.r1 / 2 * r1_loss * args.d_reg_every + 0 * real_pred[0]).backward()
-
+            d_loss.backward()
             d_optim.step()
 
-        loss_dict['r1'] = r1_loss
+            d_regularize = i % args.d_reg_every == 0
 
-        requires_grad(generator, True)
-        requires_grad(discriminator, False)
+            if d_regularize:
+                real.requires_grad = True
+                real_pred = discriminator(real, key)
+                r1_loss = d_r1_loss(real_pred, real)
 
-        noise = mixing_noise(args.batch, args.latent, args.mixing, device)
+                discriminator.zero_grad()
+                (args.r1 / 2 * r1_loss * args.d_reg_every + 0 * real_pred[0]).backward()
 
-        fake_img, _ = generator(converted, noise)
-        fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
-        fake_pred = discriminator(fake, key)
-        g_loss = g_nonsaturating_loss(fake_pred)
+                d_optim.step()
 
-        loss_dict['g'] = g_loss
+            loss_dict['r1'] = r1_loss
 
-        generator.zero_grad()
-        g_loss.backward()
-        g_optim.step()
+            requires_grad(generator, True)
+            requires_grad(discriminator, False)
 
-        loss_dict['path'] = path_loss
-        loss_dict['path_length'] = path_lengths.mean()
+            noise = mixing_noise(args.batch, args.latent, args.mixing, device)
 
-        accumulate(g_ema, g_module, accum)
+            fake_img, _ = generator(converted, noise)
+            fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
+            fake_pred = discriminator(fake, key)
+            g_loss = g_nonsaturating_loss(fake_pred)
 
-        loss_reduced = reduce_loss_dict(loss_dict)
+            loss_dict['g'] = g_loss
 
-        d_loss_val = loss_reduced['d'].mean().item()
-        g_loss_val = loss_reduced['g'].mean().item()
-        r1_val = loss_reduced['r1'].mean().item()
-        path_loss_val = loss_reduced['path'].mean().item()
-        real_score_val = loss_reduced['real_score'].mean().item()
-        fake_score_val = loss_reduced['fake_score'].mean().item()
-        path_length_val = loss_reduced['path_length'].mean().item()
+            generator.zero_grad()
+            g_loss.backward()
+            g_optim.step()
+
+            loss_dict['path'] = path_loss
+            loss_dict['path_length'] = path_lengths.mean()
+
+            accumulate(g_ema, g_module, accum)
+
+            loss_reduced = reduce_loss_dict(loss_dict)
+
+            d_loss_val = loss_reduced['d'].mean().item()
+            g_loss_val = loss_reduced['g'].mean().item()
+            r1_val = loss_reduced['r1'].mean().item()
+            path_loss_val = loss_reduced['path'].mean().item()
+            real_score_val = loss_reduced['real_score'].mean().item()
+            fake_score_val = loss_reduced['fake_score'].mean().item()
+            path_length_val = loss_reduced['path_length'].mean().item()
+        ####################################################################################################
+        elif portion_selector <= args.portion_1x + args.portion_2x:
+            data = next(loader_2x)
+            key = np.random.randint(n_scales)
+            real_stack = data[key].to(device)
+
+            real_img, converted = real_stack[:, :3], real_stack[:, 3:]
+
+            requires_grad(generator, False)
+            requires_grad(discriminator_2x, True)
+
+            noise = mixing_noise(args.batch, args.latent, args.mixing, device)
+
+            fake_img, _ = generator(converted, noise)
+            fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
+            fake_pred = discriminator_2x(fake, key)
+
+            real = real_img if args.img2dis else real_stack
+            real_pred = discriminator_2x(real, key)
+            d_loss = d_logistic_loss(real_pred, fake_pred)
+
+            loss_dict['d'] = d_loss
+            loss_dict['real_score'] = real_pred.mean()
+            loss_dict['fake_score'] = fake_pred.mean()
+
+            discriminator_2x.zero_grad()
+            d_loss.backward()
+            d_optim_2x.step()
+
+            d_regularize = i % args.d_reg_every == 0
+
+            if d_regularize:
+                real.requires_grad = True
+                real_pred = discriminator_2x(real, key)
+                r1_loss = d_r1_loss(real_pred, real)
+
+                discriminator_2x.zero_grad()
+                (args.r1 / 2 * r1_loss * args.d_reg_every + 0 * real_pred[0]).backward()
+
+                d_optim_2x.step()
+
+            loss_dict['r1'] = r1_loss
+
+            requires_grad(generator, True)
+            requires_grad(discriminator_2x, False)
+
+            noise = mixing_noise(args.batch, args.latent, args.mixing, device)
+
+            fake_img, _ = generator(converted, noise)
+            fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
+            fake_pred = discriminator_2x(fake, key)
+            g_loss = g_nonsaturating_loss(fake_pred)
+
+            loss_dict['g'] = g_loss
+
+            generator.zero_grad()
+            g_loss.backward()
+            g_optim.step()
+
+            loss_dict['path'] = path_loss
+            loss_dict['path_length'] = path_lengths.mean()
+
+            accumulate(g_ema, g_module, accum)
+
+            loss_reduced = reduce_loss_dict(loss_dict)
+
+            d_loss_val = loss_reduced['d'].mean().item()
+            g_loss_val = loss_reduced['g'].mean().item()
+            r1_val = loss_reduced['r1'].mean().item()
+            path_loss_val = loss_reduced['path'].mean().item()
+            real_score_val = loss_reduced['real_score'].mean().item()
+            fake_score_val = loss_reduced['fake_score'].mean().item()
+            path_length_val = loss_reduced['path_length'].mean().item()
+        ####################################################################################################
+        elif portion_selector <= args.portion_1x + args.portion_2x + args.portion_4x:
+            data = next(loader_4x)
+            key = np.random.randint(n_scales)
+            real_stack = data[key].to(device)
+
+            real_img, converted = real_stack[:, :3], real_stack[:, 3:]
+
+            requires_grad(generator, False)
+            requires_grad(discriminator_4x, True)
+
+            noise = mixing_noise(args.batch, args.latent, args.mixing, device)
+
+            fake_img, _ = generator(converted, noise)
+            fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
+            fake_pred = discriminator_4x(fake, key)
+
+            real = real_img if args.img2dis else real_stack
+            real_pred = discriminator_4x(real, key)
+            d_loss = d_logistic_loss(real_pred, fake_pred)
+
+            loss_dict['d'] = d_loss
+            loss_dict['real_score'] = real_pred.mean()
+            loss_dict['fake_score'] = fake_pred.mean()
+
+            discriminator_4x.zero_grad()
+            d_loss.backward()
+            d_optim_4x.step()
+
+            d_regularize = i % args.d_reg_every == 0
+
+            if d_regularize:
+                real.requires_grad = True
+                real_pred = discriminator_4x(real, key)
+                r1_loss = d_r1_loss(real_pred, real)
+
+                discriminator_4x.zero_grad()
+                (args.r1 / 2 * r1_loss * args.d_reg_every + 0 * real_pred[0]).backward()
+
+                d_optim_4x.step()
+
+            loss_dict['r1'] = r1_loss
+
+            requires_grad(generator, True)
+            requires_grad(discriminator_4x, False)
+
+            noise = mixing_noise(args.batch, args.latent, args.mixing, device)
+
+            fake_img, _ = generator(converted, noise)
+            fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
+            fake_pred = discriminator_4x(fake, key)
+            g_loss = g_nonsaturating_loss(fake_pred)
+
+            loss_dict['g'] = g_loss
+
+            generator.zero_grad()
+            g_loss.backward()
+            g_optim.step()
+
+            loss_dict['path'] = path_loss
+            loss_dict['path_length'] = path_lengths.mean()
+
+            accumulate(g_ema, g_module, accum)
+
+            loss_reduced = reduce_loss_dict(loss_dict)
+
+            d_loss_val = loss_reduced['d'].mean().item()
+            g_loss_val = loss_reduced['g'].mean().item()
+            r1_val = loss_reduced['r1'].mean().item()
+            path_loss_val = loss_reduced['path'].mean().item()
+            real_score_val = loss_reduced['real_score'].mean().item()
+            fake_score_val = loss_reduced['fake_score'].mean().item()
+            path_length_val = loss_reduced['path_length'].mean().item()
+        ####################################################################################################
 
         if get_rank() == 0:
             pbar.set_description(
@@ -236,10 +393,10 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
             if i % 500 == 0:
                 with torch.no_grad():
                     g_ema.eval()
-                    converted_full = convert_to_coord_format(sample_z.size(0), args.size, args.size, device,
+                    converted_full = convert_to_coord_format_mip(sample_z.size(0), args.size, args.size, device,
                                                              integer_values=args.coords_integer_values)
                     if args.generate_by_one:
-                        converted_full = convert_to_coord_format(1, args.size, args.size, device,
+                        converted_full = convert_to_coord_format_mip(1, args.size, args.size, device,
                                                                  integer_values=args.coords_integer_values)
                         samples = []
                         for sz in sample_z:
@@ -280,10 +437,10 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
             if i % 500 == 0:
                 with torch.no_grad():
                     g_ema.eval()
-                    converted_full = convert_to_coord_format(sample_z.size(0), int(args.size/4), int(args.size/4), device,
+                    converted_full = convert_to_coord_format_mip(sample_z.size(0), int(args.size/4), int(args.size/4), device,
                                                              integer_values=args.coords_integer_values)
                     if args.generate_by_one:
-                        converted_full = convert_to_coord_format(1, int(args.size/4), int(args.size/4), device,
+                        converted_full = convert_to_coord_format_mip(1, int(args.size/4), int(args.size/4), device,
                                                                  integer_values=args.coords_integer_values)
                         samples = []
                         for sz in sample_z:
@@ -327,16 +484,20 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
                     {
                         'g': g_module.state_dict(),
                         'd': d_module.state_dict(),
+                        'd_2x': d_module_2x.state_dict(),
+                        'd_4x': d_module_4x.state_dict(),
                         'g_ema': g_ema.state_dict(),
                         'g_optim': g_optim.state_dict(),
                         'd_optim': d_optim.state_dict(),
+                        'd_optim_2x': d_optim_2x.state_dict(),
+                        'd_optim_4x': d_optim_4x.state_dict(),
                     },
                     os.path.join(
                         path,
                         f'outputs/{args.output_dir}/checkpoints/{str(i).zfill(6)}.pt'),
                 )
                 if i > 0:
-                    cur_metrics = calculate_fid_ddp(g_ema, fid_dataset=fid_dataset, bs=args.fid_batch, size=args.coords_size,
+                    cur_metrics = calculate_fid_ddp_mip(g_ema, fid_dataset=fid_dataset, bs=args.fid_batch, size=args.coords_size,
                                                 num_batches=args.fid_samples//args.fid_batch, latent_size=args.latent,
                                                 save_dir=args.path_fid, integer_values=args.coords_integer_values)
                     if nsml:
@@ -385,7 +546,15 @@ def ddp_worker(rank, world_size, args):
 
     print('generator N params', sum(p.numel() for p in generator.parameters() if p.requires_grad))
     discriminator = Discriminator(
-        size=args.crop, channel_multiplier=args.channel_multiplier, n_scales=n_scales, input_size=args.dis_input_size,
+        size=int(args.crop/args.patch_multiplier), channel_multiplier=args.channel_multiplier, n_scales=n_scales, input_size=args.dis_input_size,
+        n_first_layers=args.n_first_layers,
+    ).to(device)
+    discriminator_2x = Discriminator(
+        size=int(args.crop/args.patch_multiplier), channel_multiplier=args.channel_multiplier, n_scales=n_scales, input_size=args.dis_input_size,
+        n_first_layers=args.n_first_layers,
+    ).to(device)
+    discriminator_4x = Discriminator(
+        size=int(args.crop/args.patch_multiplier), channel_multiplier=args.channel_multiplier, n_scales=n_scales, input_size=args.dis_input_size,
         n_first_layers=args.n_first_layers,
     ).to(device)
     g_ema = Generator(size=args.size, hidden_size=args.fc_dim, style_dim=args.latent, n_mlp=args.n_mlp,
@@ -412,6 +581,20 @@ def ddp_worker(rank, world_size, args):
             broadcast_buffers=False,
         )
 
+        discriminator_2x = nn.parallel.DistributedDataParallel(
+            discriminator_2x,
+            device_ids=[rank],
+            output_device=rank,
+            broadcast_buffers=False,
+        )
+
+        discriminator_4x = nn.parallel.DistributedDataParallel(
+            discriminator_4x,
+            device_ids=[rank],
+            output_device=rank,
+            broadcast_buffers=False,
+        )
+
     g_optim = optim.Adam(
         generator.parameters(),
         lr=args.lr * g_reg_ratio,
@@ -419,6 +602,16 @@ def ddp_worker(rank, world_size, args):
     )
     d_optim = optim.Adam(
         discriminator.parameters(),
+        lr=args.lr * d_reg_ratio,
+        betas=(0 ** d_reg_ratio, 0.99 ** d_reg_ratio),
+    )
+    d_optim_2x = optim.Adam(
+        discriminator_2x.parameters(),
+        lr=args.lr * d_reg_ratio,
+        betas=(0 ** d_reg_ratio, 0.99 ** d_reg_ratio),
+    )
+    d_optim_4x = optim.Adam(
+        discriminator_4x.parameters(),
         lr=args.lr * d_reg_ratio,
         betas=(0 ** d_reg_ratio, 0.99 ** d_reg_ratio),
     )
@@ -437,10 +630,14 @@ def ddp_worker(rank, world_size, args):
 
         generator.load_state_dict(ckpt['g'])
         discriminator.load_state_dict(ckpt['d'])
+        discriminator_2x.load_state_dict(ckpt['d_2x'])
+        discriminator_4x.load_state_dict(ckpt['d_4x'])
         g_ema.load_state_dict(ckpt['g_ema'])
 
         g_optim.load_state_dict(ckpt['g_optim'])
         d_optim.load_state_dict(ckpt['d_optim'])
+        d_optim_2x.load_state_dict(ckpt['d_optim_2x'])
+        d_optim_4x.load_state_dict(ckpt['d_optim_4x'])
 
         del ckpt
         torch.cuda.empty_cache()
@@ -458,9 +655,15 @@ def ddp_worker(rank, world_size, args):
 
     if nsml:
         args.path = os.path.join(DATASET_PATH, 'train', args.path.split('/')[-1])
+        args.path_2x = os.path.join(DATASET_PATH, 'train', args.path_2x.split('/')[-1])
+        args.path_4x = os.path.join(DATASET_PATH, 'train', args.path_4x.split('/')[-1])
     else:
         pass
-    dataset = MultiScaleDataset(args.path, transform=transform, resolution=args.coords_size, crop_size=args.crop,
+    dataset = MultiScalePatchMipDataset(args.path, transform=transform, resolution=args.coords_size, crop_size=int(args.crop/args.patch_multiplier),
+                                integer_values=args.coords_integer_values, to_crop=args.to_crop)
+    dataset_2x = MultiScalePatchMipDataset(args.path_2x, transform=transform, resolution=int(args.coords_size/args.patch_multiplier)*2, crop_size=int(args.crop/args.patch_multiplier),
+                                integer_values=args.coords_integer_values, to_crop=args.to_crop)
+    dataset_4x = MultiScaleMipDataset(args.path_4x, transform=transform, resolution=int(args.coords_size/args.patch_multiplier), crop_size=int(args.crop/args.patch_multiplier),
                                 integer_values=args.coords_integer_values, to_crop=args.to_crop)
     fid_dataset = ImageDataset(args.path, transform=transform_fid, resolution=args.coords_size, to_crop=args.to_crop)
     fid_dataset.length = args.fid_samples
@@ -472,10 +675,26 @@ def ddp_worker(rank, world_size, args):
         num_workers=0,
         pin_memory=True,
     )
+    loader_2x = data.DataLoader(
+        dataset_2x,
+        batch_size=args.batch,
+        sampler=data_sampler(dataset, shuffle=True, distributed=args.distributed),
+        drop_last=True,
+        num_workers=0,
+        pin_memory=True,
+    )
+    loader_4x = data.DataLoader(
+        dataset_4x,
+        batch_size=args.batch,
+        sampler=data_sampler(dataset, shuffle=True, distributed=args.distributed),
+        drop_last=True,
+        num_workers=0,
+        pin_memory=True,
+    )
 
     writer = SummaryWriter(log_dir=args.logdir)
 
-    train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, device, fid_dataset, n_scales, writer, path)
+    train(args, loader, loader_2x, loader_4x, generator, discriminator, discriminator_2x, discriminator_4x, g_optim, d_optim, d_optim_2x, d_optim_4x, g_ema, device, fid_dataset, n_scales, writer, path)
 
 
 if __name__ == '__main__':
@@ -484,6 +703,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('path', type=str)
+    parser.add_argument('path_2x', type=str)
+    parser.add_argument('path_4x', type=str)
     parser.add_argument('--output_dir', type=str)
     parser.add_argument('--out_path', type=str, default='.')
     parser.add_argument('--distributed', type=bool, default=False)
@@ -501,6 +722,9 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=0.002)
     parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument('--save_checkpoint_frequency', type=int, default=20000)
+    parser.add_argument('--portion_1x', type=int, default=3)
+    parser.add_argument('--portion_2x', type=int, default=1)
+    parser.add_argument('--portion_4x', type=int, default=1)
 
     # dataset
     parser.add_argument('--batch', type=int, default=4)
@@ -508,6 +732,7 @@ if __name__ == '__main__':
     parser.add_argument('--to_crop', action='store_true')
     parser.add_argument('--crop', type=int, default=256)
     parser.add_argument('--coords_size', type=int, default=256)
+    parser.add_argument('--patch_multiplier', type=int, default=4)
 
     # Generator params
     parser.add_argument('--Generator', type=str, default='ModSIREN')
@@ -568,7 +793,15 @@ if __name__ == '__main__':
 
         print('generator N params', sum(p.numel() for p in generator.parameters() if p.requires_grad))
         discriminator = Discriminator(
-            size=args.crop, channel_multiplier=args.channel_multiplier, n_scales=n_scales, input_size=args.dis_input_size,
+            size=int(args.crop/args.patch_multiplier), channel_multiplier=args.channel_multiplier, n_scales=n_scales, input_size=args.dis_input_size,
+            n_first_layers=args.n_first_layers,
+        ).to(device)
+        discriminator_2x = Discriminator(
+            size=int(args.crop/args.patch_multiplier), channel_multiplier=args.channel_multiplier, n_scales=n_scales, input_size=args.dis_input_size,
+            n_first_layers=args.n_first_layers,
+        ).to(device)
+        discriminator_4x = Discriminator(
+            size=int(args.crop/args.patch_multiplier), channel_multiplier=args.channel_multiplier, n_scales=n_scales, input_size=args.dis_input_size,
             n_first_layers=args.n_first_layers,
         ).to(device)
         g_ema = Generator(size=args.size, hidden_size=args.fc_dim, style_dim=args.latent, n_mlp=args.n_mlp,
@@ -590,6 +823,16 @@ if __name__ == '__main__':
             lr=args.lr * d_reg_ratio,
             betas=(0 ** d_reg_ratio, 0.99 ** d_reg_ratio),
         )
+        d_optim_2x = optim.Adam(
+            discriminator_2x.parameters(),
+            lr=args.lr * d_reg_ratio,
+            betas=(0 ** d_reg_ratio, 0.99 ** d_reg_ratio),
+        )
+        d_optim_4x = optim.Adam(
+            discriminator_4x.parameters(),
+            lr=args.lr * d_reg_ratio,
+            betas=(0 ** d_reg_ratio, 0.99 ** d_reg_ratio),
+        )
 
         if args.ckpt is not None:
             print('load model:', args.ckpt)
@@ -605,10 +848,14 @@ if __name__ == '__main__':
 
             generator.load_state_dict(ckpt['g'])
             discriminator.load_state_dict(ckpt['d'])
+            discriminator_2x.load_state_dict(ckpt['d_2x'])
+            discriminator_4x.load_state_dict(ckpt['d_4x'])
             g_ema.load_state_dict(ckpt['g_ema'])
 
             g_optim.load_state_dict(ckpt['g_optim'])
             d_optim.load_state_dict(ckpt['d_optim'])
+            d_optim_2x.load_state_dict(ckpt['d_optim_2x'])
+            d_optim_4x.load_state_dict(ckpt['d_optim_4x'])
 
             del ckpt
             torch.cuda.empty_cache()
@@ -641,9 +888,15 @@ if __name__ == '__main__':
 
         if nsml:
             args.path = os.path.join(DATASET_PATH, 'train', args.path.split('/')[-1])
+            args.path_2x = os.path.join(DATASET_PATH, 'train', args.path_2x.split('/')[-1])
+            args.path_4x = os.path.join(DATASET_PATH, 'train', args.path_4x.split('/')[-1])
         else:
             pass
-        dataset = MultiScaleDataset(args.path, transform=transform, resolution=args.coords_size, crop_size=args.crop,
+        dataset = MultiScalePatchMipDataset(args.path, transform=transform, resolution=args.coords_size, crop_size=int(args.crop/args.patch_multiplier),
+                                    integer_values=args.coords_integer_values, to_crop=args.to_crop)
+        dataset_2x = MultiScalePatchMipDataset(args.path_2x, transform=transform, resolution=int(args.coords_size/args.patch_multiplier)*2, crop_size=int(args.crop/args.patch_multiplier),
+                                    integer_values=args.coords_integer_values, to_crop=args.to_crop)
+        dataset_4x = MultiScaleMipDataset(args.path_4x, transform=transform, resolution=int(args.coords_size/args.patch_multiplier), crop_size=int(args.crop/args.patch_multiplier),
                                     integer_values=args.coords_integer_values, to_crop=args.to_crop)
         fid_dataset = ImageDataset(args.path, transform=transform_fid, resolution=args.coords_size, to_crop=args.to_crop)
         fid_dataset.length = args.fid_samples
@@ -655,10 +908,26 @@ if __name__ == '__main__':
             num_workers=args.num_workers,
             pin_memory=True,
         )
+        loader_2x = data.DataLoader(
+            dataset_2x,
+            batch_size=args.batch,
+            sampler=data_sampler(dataset, shuffle=True, distributed=args.distributed),
+            drop_last=True,
+            num_workers=args.num_workers,
+            pin_memory=True,
+        )
+        loader_4x = data.DataLoader(
+            dataset_4x,
+            batch_size=args.batch,
+            sampler=data_sampler(dataset, shuffle=True, distributed=args.distributed),
+            drop_last=True,
+            num_workers=args.num_workers,
+            pin_memory=True,
+        )
 
         writer = SummaryWriter(log_dir=args.logdir)
 
-        train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, device, fid_dataset, n_scales, writer, path)
+        train(args, loader, loader_2x, loader_4x, generator, discriminator, discriminator_2x, discriminator_4x, g_optim, d_optim, d_optim_2x, d_optim_4x, g_ema, device, fid_dataset, n_scales, writer, path)
     else:
         world_size = args.world_size
         mp.spawn(ddp_worker, args=(world_size, args), nprocs=world_size, join=True)

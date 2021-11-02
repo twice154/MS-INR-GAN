@@ -276,6 +276,50 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
                             normalize=True,
                             range=(-1, 1),
                         )
+            if i % 500 == 0:
+                with torch.no_grad():
+                    g_ema.eval()
+                    converted_full = convert_to_coord_format(sample_z.size(0), int(args.size/4), int(args.size/4), device,
+                                                             integer_values=args.coords_integer_values)
+                    if args.generate_by_one:
+                        converted_full = convert_to_coord_format(1, int(args.size/4), int(args.size/4), device,
+                                                                 integer_values=args.coords_integer_values)
+                        samples = []
+                        for sz in sample_z:
+                            sample, _ = g_ema(converted_full, [sz.unsqueeze(0)])
+                            samples.append(sample)
+                        sample = torch.cat(samples, 0)
+                    else:
+                        sample, _ = g_ema(converted_full, [sample_z])
+
+                    utils.save_image(
+                        sample,
+                        os.path.join(path, 'outputs', args.output_dir, 'images_4x_mini', f'{str(i).zfill(6)}.png'),
+                        nrow=int(args.n_sample ** 0.5),
+                        normalize=True,
+                        range=(-1, 1),
+                    )
+
+                    if i == 0:
+                        utils.save_image(
+                            fake_img,
+                            os.path.join(
+                                path,
+                                f'outputs/{args.output_dir}/images_4x_mini/fake_patch_{str(key)}_{str(i).zfill(6)}.png'),
+                            nrow=int(fake_img.size(0) ** 0.5),
+                            normalize=True,
+                            range=(-1, 1),
+                        )
+
+                        utils.save_image(
+                            real_img,
+                            os.path.join(
+                                path,
+                                f'outputs/{args.output_dir}/images_4x_mini/real_patch_{str(key)}_{str(i).zfill(6)}.png'),
+                            nrow=int(real_img.size(0) ** 0.5),
+                            normalize=True,
+                            range=(-1, 1),
+                        )
 
             if i % args.save_checkpoint_frequency == 0:
                 torch.save(
@@ -358,6 +402,7 @@ if __name__ == '__main__':
     print('Discriminator', Discriminator)
 
     os.makedirs(os.path.join(path, 'outputs', args.output_dir, 'images'), exist_ok=True)
+    os.makedirs(os.path.join(path, 'outputs', args.output_dir, 'images_4x_mini'), exist_ok=True)
     os.makedirs(os.path.join(path, 'outputs', args.output_dir, 'checkpoints'), exist_ok=True)
     args.logdir = os.path.join(path, 'tensorboard', args.output_dir)
     os.makedirs(args.logdir, exist_ok=True)

@@ -147,7 +147,7 @@ nsml run -d celeba_hq_lmdb -g 1 --memory "16G" --shm-size "8GB" --cpus 4 -e "tra
 --Generator=CIPSskippatch --size=64 --fc_dim=32 --latent=32 --n_mlp=5 \
 --Discriminator=DiscriminatorCoordinate --r1=0.1 --img2dis" \
 -m "ss_patch_aux0_r10.1" --gpu-driver-version "440"
-KR63188/celeba_hq_lmdb/72
+KR63188/celeba_hq_lmdb/82
 
 nsml run -d celeba_hq_lmdb -g 1 --memory "16G" --shm-size "8GB" --cpus 4 -e "train_patch.py" \
 -a "/home/MS-INR-GAN/data/celeba_hq_lmdb/64 --output_dir=skip_celeba_hq_ss_patch_aux0 \

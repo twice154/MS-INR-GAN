@@ -9,15 +9,16 @@ from torch import nn, autograd, optim
 from torch.nn import functional as F
 from torch.utils import data
 import torch.distributed as dist
+import torch.multiprocessing as mp
 from torchvision import transforms, utils
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 import model
-from dataset import MultiScaleDataset, ImageDataset, MultiScalePatchDataset
-from calculate_fid import calculate_fid
+from dataset import MultiScaleDataset, ImageDataset, MultiScaleMipDataset
+from calculate_fid import calculate_fid, calculate_fid_ddp, calculate_fid_ddp_mip
 from distributed import get_rank, synchronize, reduce_loss_dict
-from tensor_transforms import convert_to_coord_format
+from tensor_transforms import convert_to_coord_format, convert_to_coord_format_mip
 
 try:
     import nsml
@@ -63,14 +64,6 @@ def d_logistic_loss(real_pred, fake_pred):
     return real_loss.mean() + fake_loss.mean()
 
 
-def d_coordinate_l2_loss(coord_h, pred_coord_h, coord_w, pred_coord_w):
-    loss = nn.MSELoss(reduction='sum')
-    h_loss = loss(coord_h, pred_coord_h.squeeze())
-    w_loss = loss(coord_w, pred_coord_w.squeeze())
-
-    return h_loss.mean() + w_loss.mean()
-
-
 def d_r1_loss(real_pred, real_img):
     grad_real, = autograd.grad(
         outputs=real_pred.sum(), inputs=real_img, create_graph=True
@@ -103,7 +96,7 @@ def mixing_noise(batch, latent_dim, prob, device):
         return [make_noise(batch, latent_dim, 1, device)]
 
 
-def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, device, fid_dataset):
+def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, device, fid_dataset, n_scales, writer, path):
     loader = sample_data(loader)
 
     pbar = range(args.iter)
@@ -139,11 +132,9 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
 
             break
 
-        data, coord_h, coord_w = next(loader)
+        data = next(loader)
         key = np.random.randint(n_scales)
         real_stack = data[key].to(device)
-        coord_h = coord_h.to(device)
-        coord_w = coord_w.to(device)
 
         real_img, converted = real_stack[:, :3], real_stack[:, 3:]
 
@@ -154,17 +145,13 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
 
         fake_img, _ = generator(converted, noise)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
-        fake_pred, fake_pred_coord_h, fake_pred_coord_w = discriminator(fake, key)
+        fake_pred = discriminator(fake, key)
 
         real = real_img if args.img2dis else real_stack
-        real_pred, real_pred_coord_h, real_pred_coord_w = discriminator(real, key)
-        d_loss_main = d_logistic_loss(real_pred, fake_pred)
-        d_loss_aux = args.aux_loss*d_coordinate_l2_loss(coord_h, real_pred_coord_h, coord_w, real_pred_coord_w) + args.aux_loss*d_coordinate_l2_loss(coord_h, fake_pred_coord_h, coord_w, fake_pred_coord_w)
-        d_loss = d_loss_main + d_loss_aux
+        real_pred = discriminator(real, key)
+        d_loss = d_logistic_loss(real_pred, fake_pred)
 
         loss_dict['d'] = d_loss
-        loss_dict['d_main'] = d_loss_main
-        loss_dict['d_aux'] = d_loss_aux
         loss_dict['real_score'] = real_pred.mean()
         loss_dict['fake_score'] = fake_pred.mean()
 
@@ -176,7 +163,7 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
 
         if d_regularize:
             real.requires_grad = True
-            real_pred, _, _ = discriminator(real, key)
+            real_pred = discriminator(real, key)
             r1_loss = d_r1_loss(real_pred, real)
 
             discriminator.zero_grad()
@@ -193,14 +180,10 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
 
         fake_img, _ = generator(converted, noise)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
-        fake_pred, fake_pred_coord_h, fake_pred_coord_w = discriminator(fake, key)
-        g_loss_main = g_nonsaturating_loss(fake_pred)
-        g_loss_aux = args.aux_loss*d_coordinate_l2_loss(coord_h, fake_pred_coord_h, coord_w, fake_pred_coord_w)
-        g_loss = g_loss_main + g_loss_aux
+        fake_pred = discriminator(fake, key)
+        g_loss = g_nonsaturating_loss(fake_pred)
 
         loss_dict['g'] = g_loss
-        loss_dict['g_main'] = g_loss_main
-        loss_dict['g_aux'] = g_loss_aux
 
         generator.zero_grad()
         g_loss.backward()
@@ -214,11 +197,7 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
         loss_reduced = reduce_loss_dict(loss_dict)
 
         d_loss_val = loss_reduced['d'].mean().item()
-        d_loss_main_val = loss_reduced['d_main'].mean().item()
-        d_loss_aux_val = loss_reduced['d_aux'].mean().item()
         g_loss_val = loss_reduced['g'].mean().item()
-        g_loss_main_val = loss_reduced['g_main'].mean().item()
-        g_loss_aux_val = loss_reduced['g_aux'].mean().item()
         r1_val = loss_reduced['r1'].mean().item()
         path_loss_val = loss_reduced['path'].mean().item()
         real_score_val = loss_reduced['real_score'].mean().item()
@@ -237,11 +216,7 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
                 if nsml:
                     nsml.report(summary=True, step=i,
                     Generator=g_loss_val,
-                    G_main=g_loss_main_val,
-                    G_aux=g_loss_aux_val,
                     Discriminator=d_loss_val,
-                    D_main=d_loss_main_val,
-                    D_aux=d_loss_aux_val,
                     R1=r1_val,
                     PathLengthRegularization=path_loss_val,
                     MeanPathLength=mean_path_length,
@@ -261,10 +236,10 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
             if i % 500 == 0:
                 with torch.no_grad():
                     g_ema.eval()
-                    converted_full = convert_to_coord_format(sample_z.size(0), args.size, args.size, device,
+                    converted_full = convert_to_coord_format_mip(sample_z.size(0), args.size, args.size, device,
                                                              integer_values=args.coords_integer_values)
                     if args.generate_by_one:
-                        converted_full = convert_to_coord_format(1, args.size, args.size, device,
+                        converted_full = convert_to_coord_format_mip(1, args.size, args.size, device,
                                                                  integer_values=args.coords_integer_values)
                         samples = []
                         for sz in sample_z:
@@ -305,10 +280,10 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
             if i % 500 == 0:
                 with torch.no_grad():
                     g_ema.eval()
-                    converted_full = convert_to_coord_format(sample_z.size(0), int(args.size/4), int(args.size/4), device,
+                    converted_full = convert_to_coord_format_mip(sample_z.size(0), int(args.size/4), int(args.size/4), device,
                                                              integer_values=args.coords_integer_values)
                     if args.generate_by_one:
-                        converted_full = convert_to_coord_format(1, int(args.size/4), int(args.size/4), device,
+                        converted_full = convert_to_coord_format_mip(1, int(args.size/4), int(args.size/4), device,
                                                                  integer_values=args.coords_integer_values)
                         samples = []
                         for sz in sample_z:
@@ -361,7 +336,7 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
                         f'outputs/{args.output_dir}/checkpoints/{str(i).zfill(6)}.pt'),
                 )
                 if i > 0:
-                    cur_metrics = calculate_fid(g_ema, fid_dataset=fid_dataset, bs=args.fid_batch, size=args.coords_size,
+                    cur_metrics = calculate_fid_ddp_mip(g_ema, fid_dataset=fid_dataset, bs=args.fid_batch, size=args.coords_size,
                                                 num_batches=args.fid_samples//args.fid_batch, latent_size=args.latent,
                                                 save_dir=args.path_fid, integer_values=args.coords_integer_values)
                     if nsml:
@@ -371,64 +346,14 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
                     print(i, "fid",  cur_metrics['frechet_inception_distance'])
 
 
-if __name__ == '__main__':
-    device = 'cuda'
-
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('path', type=str)
-    parser.add_argument('--output_dir', type=str)
-    parser.add_argument('--out_path', type=str, default='.')
-
-    # fid
-    parser.add_argument('--fid_samples', type=int, default=50000)
-    parser.add_argument('--fid_batch', type=int, default=16)
-
-    # training
-    parser.add_argument('--iter', type=int, default=1200000)
-    parser.add_argument('--n_sample', type=int, default=64)
-    parser.add_argument('--generate_by_one', action='store_true')
-    parser.add_argument('--ckpt', type=str, default=None)
-    parser.add_argument('--lr', type=float, default=0.002)
-    parser.add_argument('--local_rank', type=int, default=0)
-    parser.add_argument('--save_checkpoint_frequency', type=int, default=20000)
-    parser.add_argument('--aux_loss', type=float, default=0.1)
-
-    # dataset
-    parser.add_argument('--batch', type=int, default=4)
-    parser.add_argument('--num_workers', type=int, default=32)
-    parser.add_argument('--to_crop', action='store_true')
-    parser.add_argument('--crop', type=int, default=256)
-    parser.add_argument('--coords_size', type=int, default=256)
-    parser.add_argument('--patch_multiplier', type=int, default=4)
-
-    # Generator params
-    parser.add_argument('--Generator', type=str, default='ModSIREN')
-    parser.add_argument('--coords_integer_values', action='store_true')
-    parser.add_argument('--size', type=int, default=256)
-    parser.add_argument('--fc_dim', type=int, default=512)
-    parser.add_argument('--latent', type=int, default=512)
-    parser.add_argument('--activation', type=str, default=None)
-    parser.add_argument('--channel_multiplier', type=int, default=2)
-    parser.add_argument('--mixing', type=float, default=0.)
-    parser.add_argument('--g_reg_every', type=int, default=4)
-    parser.add_argument('--n_mlp', type=int, default=8)
-
-    # Discriminator params
-    parser.add_argument('--Discriminator', type=str, default='Discriminator')
-    parser.add_argument('--d_reg_every', type=int, default=16)
-    parser.add_argument('--r1', type=float, default=10)
-    parser.add_argument('--img2dis',  action='store_true')
-    parser.add_argument('--n_first_layers', type=int, default=0)
-
-    args = parser.parse_args()
+def ddp_worker(rank, world_size, args):
     path = args.out_path
 
     Generator = getattr(model, args.Generator)
     print('Generator', Generator)
     Discriminator = getattr(model, args.Discriminator)
     print('Discriminator', Discriminator)
-
+    
     os.makedirs(os.path.join(path, 'outputs', args.output_dir, 'images'), exist_ok=True)
     os.makedirs(os.path.join(path, 'outputs', args.output_dir, 'images_4x_mini'), exist_ok=True)
     os.makedirs(os.path.join(path, 'outputs', args.output_dir, 'checkpoints'), exist_ok=True)
@@ -437,12 +362,13 @@ if __name__ == '__main__':
     args.path_fid = os.path.join(path, 'fid', args.output_dir)
     os.makedirs(args.path_fid, exist_ok=True)
 
-    n_gpu = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
-    args.distributed = n_gpu > 1
+    # n_gpu = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
+    # args.distributed = n_gpu > 1
 
     if args.distributed:
-        torch.cuda.set_device(args.local_rank)
-        torch.distributed.init_process_group(backend='nccl', init_method='env://')
+        torch.cuda.set_device(rank)
+        device = torch.device("cuda:{}".format(rank))
+        torch.distributed.init_process_group(backend='nccl', init_method='tcp://127.0.0.1:32797', rank=rank, world_size=world_size)
         synchronize()
 
     # args.n_mlp = 8
@@ -454,22 +380,37 @@ if __name__ == '__main__':
     print('n_scales', n_scales)
 
     generator = Generator(size=args.size, hidden_size=args.fc_dim, style_dim=args.latent, n_mlp=args.n_mlp,
-                          activation=args.activation, channel_multiplier=args.channel_multiplier
-                          ).to(device)
+                        activation=args.activation, channel_multiplier=args.channel_multiplier,
+                        ).to(device)
 
     print('generator N params', sum(p.numel() for p in generator.parameters() if p.requires_grad))
     discriminator = Discriminator(
-        size=int(args.crop/args.patch_multiplier), channel_multiplier=args.channel_multiplier, n_scales=n_scales, input_size=args.dis_input_size,
+        size=args.crop, channel_multiplier=args.channel_multiplier, n_scales=n_scales, input_size=args.dis_input_size,
         n_first_layers=args.n_first_layers,
     ).to(device)
     g_ema = Generator(size=args.size, hidden_size=args.fc_dim, style_dim=args.latent, n_mlp=args.n_mlp,
-                      activation=args.activation, channel_multiplier=args.channel_multiplier
-                      ).to(device)
+                    activation=args.activation, channel_multiplier=args.channel_multiplier,
+                    ).to(device)
     g_ema.eval()
     accumulate(g_ema, generator, 0)
 
     g_reg_ratio = args.g_reg_every / (args.g_reg_every + 1)
     d_reg_ratio = args.d_reg_every / (args.d_reg_every + 1)
+
+    if args.distributed:
+        generator = nn.parallel.DistributedDataParallel(
+            generator,
+            device_ids=[rank],
+            output_device=rank,
+            broadcast_buffers=False,
+        )
+
+        discriminator = nn.parallel.DistributedDataParallel(
+            discriminator,
+            device_ids=[rank],
+            output_device=rank,
+            broadcast_buffers=False,
+        )
 
     g_optim = optim.Adam(
         generator.parameters(),
@@ -504,21 +445,6 @@ if __name__ == '__main__':
         del ckpt
         torch.cuda.empty_cache()
 
-    if args.distributed:
-        generator = nn.parallel.DistributedDataParallel(
-            generator,
-            device_ids=[args.local_rank],
-            output_device=args.local_rank,
-            broadcast_buffers=False,
-        )
-
-        discriminator = nn.parallel.DistributedDataParallel(
-            discriminator,
-            device_ids=[args.local_rank],
-            output_device=args.local_rank,
-            broadcast_buffers=False,
-        )
-
     transform = transforms.Compose(
         [
             transforms.RandomHorizontalFlip(),
@@ -527,14 +453,14 @@ if __name__ == '__main__':
         ]
     )
     transform_fid = transforms.Compose([
-                                       transforms.ToTensor(),
-                                       transforms.Lambda(lambda x: x.mul_(255.).byte())])
+                                    transforms.ToTensor(),
+                                    transforms.Lambda(lambda x: x.mul_(255.).byte())])
 
     if nsml:
         args.path = os.path.join(DATASET_PATH, 'train', args.path.split('/')[-1])
     else:
         pass
-    dataset = MultiScalePatchDataset(args.path, transform=transform, resolution=args.coords_size, crop_size=int(args.crop/args.patch_multiplier),
+    dataset = MultiScaleMipDataset(args.path, transform=transform, resolution=args.coords_size, crop_size=args.crop,
                                 integer_values=args.coords_integer_values, to_crop=args.to_crop)
     fid_dataset = ImageDataset(args.path, transform=transform_fid, resolution=args.coords_size, to_crop=args.to_crop)
     fid_dataset.length = args.fid_samples
@@ -543,10 +469,196 @@ if __name__ == '__main__':
         batch_size=args.batch,
         sampler=data_sampler(dataset, shuffle=True, distributed=args.distributed),
         drop_last=True,
-        num_workers=args.num_workers,
+        num_workers=0,
         pin_memory=True,
     )
 
     writer = SummaryWriter(log_dir=args.logdir)
 
-    train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, device, fid_dataset)
+    train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, device, fid_dataset, n_scales, writer, path)
+
+
+if __name__ == '__main__':
+    device = 'cuda'
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('path', type=str)
+    parser.add_argument('--output_dir', type=str)
+    parser.add_argument('--out_path', type=str, default='.')
+    parser.add_argument('--distributed', type=bool, default=False)
+    parser.add_argument('--world_size', type=int, default=2)
+
+    # fid
+    parser.add_argument('--fid_samples', type=int, default=50000)
+    parser.add_argument('--fid_batch', type=int, default=16)
+
+    # training
+    parser.add_argument('--iter', type=int, default=1200000)
+    parser.add_argument('--n_sample', type=int, default=64)
+    parser.add_argument('--generate_by_one', action='store_true')
+    parser.add_argument('--ckpt', type=str, default=None)
+    parser.add_argument('--lr', type=float, default=0.002)
+    parser.add_argument('--local_rank', type=int, default=0)
+    parser.add_argument('--save_checkpoint_frequency', type=int, default=20000)
+
+    # dataset
+    parser.add_argument('--batch', type=int, default=4)
+    parser.add_argument('--num_workers', type=int, default=32)
+    parser.add_argument('--to_crop', action='store_true')
+    parser.add_argument('--crop', type=int, default=256)
+    parser.add_argument('--coords_size', type=int, default=256)
+
+    # Generator params
+    parser.add_argument('--Generator', type=str, default='ModSIREN')
+    parser.add_argument('--coords_integer_values', action='store_true')
+    parser.add_argument('--size', type=int, default=256)
+    parser.add_argument('--fc_dim', type=int, default=512)
+    parser.add_argument('--latent', type=int, default=512)
+    parser.add_argument('--activation', type=str, default=None)
+    parser.add_argument('--channel_multiplier', type=int, default=2)
+    parser.add_argument('--mixing', type=float, default=0.)
+    parser.add_argument('--g_reg_every', type=int, default=4)
+    parser.add_argument('--n_mlp', type=int, default=8)
+
+    # Discriminator params
+    parser.add_argument('--Discriminator', type=str, default='Discriminator')
+    parser.add_argument('--d_reg_every', type=int, default=16)
+    parser.add_argument('--r1', type=float, default=10)
+    parser.add_argument('--img2dis',  action='store_true')
+    parser.add_argument('--n_first_layers', type=int, default=0)
+
+    args = parser.parse_args()
+
+    if not args.distributed:
+        path = args.out_path
+
+        Generator = getattr(model, args.Generator)
+        print('Generator', Generator)
+        Discriminator = getattr(model, args.Discriminator)
+        print('Discriminator', Discriminator)
+
+        os.makedirs(os.path.join(path, 'outputs', args.output_dir, 'images'), exist_ok=True)
+        os.makedirs(os.path.join(path, 'outputs', args.output_dir, 'images_4x_mini'), exist_ok=True)
+        os.makedirs(os.path.join(path, 'outputs', args.output_dir, 'checkpoints'), exist_ok=True)
+        args.logdir = os.path.join(path, 'tensorboard', args.output_dir)
+        os.makedirs(args.logdir, exist_ok=True)
+        args.path_fid = os.path.join(path, 'fid', args.output_dir)
+        os.makedirs(args.path_fid, exist_ok=True)
+
+        # n_gpu = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
+        # args.distributed = n_gpu > 1
+
+        # if args.distributed:
+        #     torch.cuda.set_device(args.local_rank)
+        #     torch.distributed.init_process_group(backend='nccl', init_method='env://')
+        #     synchronize()
+
+        # args.n_mlp = 8
+        args.dis_input_size = 3 if args.img2dis else 5
+        print('img2dis', args.img2dis, 'dis_input_size', args.dis_input_size)
+
+        args.start_iter = 0
+        n_scales = int(math.log(args.size//args.crop, 2)) + 1
+        print('n_scales', n_scales)
+
+        generator = Generator(size=args.size, hidden_size=args.fc_dim, style_dim=args.latent, n_mlp=args.n_mlp,
+                            activation=args.activation, channel_multiplier=args.channel_multiplier,
+                            ).to(device)
+
+        print('generator N params', sum(p.numel() for p in generator.parameters() if p.requires_grad))
+        discriminator = Discriminator(
+            size=args.crop, channel_multiplier=args.channel_multiplier, n_scales=n_scales, input_size=args.dis_input_size,
+            n_first_layers=args.n_first_layers,
+        ).to(device)
+        g_ema = Generator(size=args.size, hidden_size=args.fc_dim, style_dim=args.latent, n_mlp=args.n_mlp,
+                        activation=args.activation, channel_multiplier=args.channel_multiplier,
+                        ).to(device)
+        g_ema.eval()
+        accumulate(g_ema, generator, 0)
+
+        g_reg_ratio = args.g_reg_every / (args.g_reg_every + 1)
+        d_reg_ratio = args.d_reg_every / (args.d_reg_every + 1)
+
+        g_optim = optim.Adam(
+            generator.parameters(),
+            lr=args.lr * g_reg_ratio,
+            betas=(0 ** g_reg_ratio, 0.99 ** g_reg_ratio),
+        )
+        d_optim = optim.Adam(
+            discriminator.parameters(),
+            lr=args.lr * d_reg_ratio,
+            betas=(0 ** d_reg_ratio, 0.99 ** d_reg_ratio),
+        )
+
+        if args.ckpt is not None:
+            print('load model:', args.ckpt)
+
+            ckpt = torch.load(args.ckpt)
+
+            try:
+                ckpt_name = os.path.basename(args.ckpt)
+                args.start_iter = int(os.path.splitext(ckpt_name)[0])
+
+            except ValueError:
+                pass
+
+            generator.load_state_dict(ckpt['g'])
+            discriminator.load_state_dict(ckpt['d'])
+            g_ema.load_state_dict(ckpt['g_ema'])
+
+            g_optim.load_state_dict(ckpt['g_optim'])
+            d_optim.load_state_dict(ckpt['d_optim'])
+
+            del ckpt
+            torch.cuda.empty_cache()
+
+        # if args.distributed:
+        #     generator = nn.parallel.DistributedDataParallel(
+        #         generator,
+        #         device_ids=[args.local_rank],
+        #         output_device=args.local_rank,
+        #         broadcast_buffers=False,
+        #     )
+
+        #     discriminator = nn.parallel.DistributedDataParallel(
+        #         discriminator,
+        #         device_ids=[args.local_rank],
+        #         output_device=args.local_rank,
+        #         broadcast_buffers=False,
+        #     )
+
+        transform = transforms.Compose(
+            [
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5), inplace=True),
+            ]
+        )
+        transform_fid = transforms.Compose([
+                                        transforms.ToTensor(),
+                                        transforms.Lambda(lambda x: x.mul_(255.).byte())])
+
+        if nsml:
+            args.path = os.path.join(DATASET_PATH, 'train', args.path.split('/')[-1])
+        else:
+            pass
+        dataset = MultiScaleMipDataset(args.path, transform=transform, resolution=args.coords_size, crop_size=args.crop,
+                                    integer_values=args.coords_integer_values, to_crop=args.to_crop)
+        fid_dataset = ImageDataset(args.path, transform=transform_fid, resolution=args.coords_size, to_crop=args.to_crop)
+        fid_dataset.length = args.fid_samples
+        loader = data.DataLoader(
+            dataset,
+            batch_size=args.batch,
+            sampler=data_sampler(dataset, shuffle=True, distributed=args.distributed),
+            drop_last=True,
+            num_workers=args.num_workers,
+            pin_memory=True,
+        )
+
+        writer = SummaryWriter(log_dir=args.logdir)
+
+        train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, device, fid_dataset, n_scales, writer, path)
+    else:
+        world_size = args.world_size
+        mp.spawn(ddp_worker, args=(world_size, args), nprocs=world_size, join=True)

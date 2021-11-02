@@ -14,10 +14,12 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 import model
-from dataset import MultiScaleDataset, ImageDataset, MultiScalePatchDataset
+from dataset import MultiScaleDataset, ImageDataset, MultiScalePatchDataset, MultiScalePatchProgressiveDataset
 from calculate_fid import calculate_fid
 from distributed import get_rank, synchronize, reduce_loss_dict
 from tensor_transforms import convert_to_coord_format
+
+from torchvision.transforms import functional as trans_fn
 
 try:
     import nsml
@@ -86,6 +88,22 @@ def g_nonsaturating_loss(fake_pred):
     return loss
 
 
+def g_structure_l2_loss(fake_img, structure_4x_img, structure_match_crop_params):
+    mse = nn.MSELoss(reduction='mean')
+    loss = None
+
+    for i in range(fake_img.shape[0]):
+        magnification = structure_match_crop_params[0][i] / structure_4x_img[i].shape[2]
+        downsampled_fake_img = trans_fn.resize(fake_img[i], int(fake_img[i].shape[2]/magnification))
+        cropped_structure_4x_img = structure_4x_img[i, :, int(structure_match_crop_params[2][i]/magnification) : int(structure_match_crop_params[2][i]/magnification) + int(structure_match_crop_params[4][i]/magnification), int(structure_match_crop_params[3][i]/magnification) : int(structure_match_crop_params[3][i]/magnification) + int(structure_match_crop_params[4][i]/magnification)]
+        if i == 0:
+            loss = mse(downsampled_fake_img, cropped_structure_4x_img)
+        else:
+            loss += mse(downsampled_fake_img, cropped_structure_4x_img)
+
+    return loss / fake_img.shape[0]
+
+
 def make_noise(batch, latent_dim, n_noise, device):
     if n_noise == 1:
         return torch.randn(batch, latent_dim, device=device)
@@ -103,10 +121,9 @@ def mixing_noise(batch, latent_dim, prob, device):
         return [make_noise(batch, latent_dim, 1, device)]
 
 
-def train(args, loader, coarse_loader, triple_loader, generator, discriminator, coarse_discriminator, triple_discriminator, g_optim, d_optim, coarse_d_optim, triple_d_optim, g_ema, device, fid_dataset):
+def train(args, loader, coarse_loader, generator, discriminator, coarse_discriminator, g_optim, d_optim, coarse_d_optim, g_ema, g_ema_4x, device, fid_dataset):
     loader = sample_data(loader)
     coarse_loader = sample_data(coarse_loader)
-    triple_loader = sample_data(triple_loader)
 
     pbar = range(args.iter)
 
@@ -125,17 +142,148 @@ def train(args, loader, coarse_loader, triple_loader, generator, discriminator, 
         g_module = generator.module
         d_module = discriminator.module
         coarse_d_module = coarse_discriminator.module
-        triple_d_module = triple_discriminator.module
 
     else:
         g_module = generator
         d_module = discriminator
         coarse_d_module = coarse_discriminator
-        triple_d_module = triple_discriminator
         
     accum = 0.5 ** (32 / (10 * 1000))
 
     sample_z = torch.randn(args.n_sample, args.latent, device=device)
+
+    ################################################## coarse training
+    for iter_4x in range(args.iter_4x):
+        print(iter_4x)
+        data = next(coarse_loader)
+        key = np.random.randint(n_scales)
+        real_stack = data[key].to(device)
+
+        real_img, converted = real_stack[:, :3], real_stack[:, 3:]
+
+        requires_grad(generator, False)
+        requires_grad(coarse_discriminator, True)
+
+        noise = mixing_noise(args.batch, args.latent, args.mixing, device)
+
+        fake_img, _ = generator(converted, noise)
+        fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
+        fake_pred = coarse_discriminator(fake, key)
+
+        real = real_img if args.img2dis else real_stack
+        real_pred = coarse_discriminator(real, key)
+        d_loss = d_logistic_loss(real_pred, fake_pred)
+
+        # loss_dict['d'] += d_loss
+        # loss_dict['d'] /= 2
+        # loss_dict['d_main'] += d_loss
+        # loss_dict['d_main'] /= 2
+        # loss_dict['real_score'] += real_pred.mean()
+        # loss_dict['real_score'] /= 2
+        # loss_dict['fake_score'] += fake_pred.mean()
+        # loss_dict['fake_score'] /= 2
+
+        loss_dict['4ximage_d'] = d_loss
+        loss_dict['4ximage_d_main'] = d_loss
+        loss_dict['4ximage_real_score'] = real_pred.mean()
+        loss_dict['4ximage_fake_score'] = fake_pred.mean()
+
+        coarse_discriminator.zero_grad()
+        d_loss.backward()
+        coarse_d_optim.step()
+
+        d_regularize = iter_4x % args.coarse_d_reg_every == 0
+
+        if d_regularize:
+            real.requires_grad = True
+            real_pred = coarse_discriminator(real, key)
+            r1_loss = d_r1_loss(real_pred, real)
+
+            coarse_discriminator.zero_grad()
+            (args.coarse_r1 / 2 * r1_loss * args.coarse_d_reg_every + 0 * real_pred[0]).backward()
+
+            coarse_d_optim.step()
+
+        # loss_dict['r1'] += r1_loss
+        # loss_dict['r1'] /= 2
+
+        loss_dict['4ximage_r1'] = r1_loss
+
+        requires_grad(generator, True)
+        requires_grad(coarse_discriminator, False)
+
+        noise = mixing_noise(args.batch, args.latent, args.mixing, device)
+
+        fake_img, _ = generator(converted, noise)
+        fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
+        fake_pred = coarse_discriminator(fake, key)
+        g_loss = g_nonsaturating_loss(fake_pred)
+
+        # loss_dict['g'] += g_loss
+        # loss_dict['g'] /= 2
+        # loss_dict['g_main'] += g_loss
+        # loss_dict['g_main'] /= 2
+
+        loss_dict['4ximage_g'] = g_loss
+        loss_dict['4ximage_g_main'] = g_loss
+
+        generator.zero_grad()
+        g_loss.backward()
+        g_optim.step()
+
+        accumulate(g_ema_4x, g_module, accum)
+
+        loss_reduced = reduce_loss_dict(loss_dict)
+
+        image4x_d_loss_val = loss_reduced['4ximage_d'].mean().item()
+        image4x_d_loss_main_val = loss_reduced['4ximage_d_main'].mean().item()
+        image4x_g_loss_val = loss_reduced['4ximage_g'].mean().item()
+        image4x_g_loss_main_val = loss_reduced['4ximage_g_main'].mean().item()
+        image4x_r1_val = loss_reduced['4ximage_r1'].mean().item()
+        image4x_real_score_val = loss_reduced['4ximage_real_score'].mean().item()
+        image4x_fake_score_val = loss_reduced['4ximage_fake_score'].mean().item()
+
+        if iter_4x % 100 == 0:
+            if nsml:
+                nsml.report(summary=True, step=iter_4x,
+                # Generator=g_loss_val,
+                # G_main=g_loss_main_val,
+                # G_aux=g_loss_aux_val,
+                # Discriminator=d_loss_val,
+                # D_main=d_loss_main_val,
+                # D_aux=d_loss_aux_val,
+                # R1=r1_val,
+                # PathLengthRegularization=path_loss_val,
+                # MeanPathLength=mean_path_length,
+                # RealScore=real_score_val,
+                # FakeScore=fake_score_val,
+                # PathLength=path_length_val,
+                # Patch1x_Generator=patch1x_g_loss_val,
+                # Patch1x_G_main=patch1x_g_loss_main_val,
+                # Patch1x_G_aux=patch1x_g_loss_aux_val,
+                # Patch1x_Discriminator=patch1x_d_loss_val,
+                # Patch1x_D_main=patch1x_d_loss_main_val,
+                # Patch1x_D_aux=patch1x_d_loss_aux_val,
+                # Patch1x_R1=patch1x_r1_val,
+                # Patch1x_RealScore=patch1x_real_score_val,
+                # Patch1x_FakeScore=patch1x_fake_score_val,
+                Image4x_Generator=image4x_g_loss_val,
+                Image4x_G_main=image4x_g_loss_main_val,
+                Image4x_Discriminator=image4x_d_loss_val,
+                Image4x_D_main=image4x_d_loss_main_val,
+                Image4x_R1=image4x_r1_val,
+                Image4x_RealScore=image4x_real_score_val,
+                Image4x_FakeScore=image4x_fake_score_val)
+            # else:
+                # writer.add_scalar("Generator", g_loss_val, i)
+                # writer.add_scalar("Discriminator", d_loss_val, i)
+                # writer.add_scalar("R1", r1_val, i)
+                # writer.add_scalar("Path Length Regularization", path_loss_val, i)
+                # writer.add_scalar("Mean Path Length", mean_path_length, i)
+                # writer.add_scalar("Real Score", real_score_val, i)
+                # writer.add_scalar("Fake Score", fake_score_val, i)
+                # writer.add_scalar("Path Length", path_length_val, i)
+    ################################################## coarse training
 
     for idx in pbar:
         i = idx + args.start_iter
@@ -146,7 +294,7 @@ def train(args, loader, coarse_loader, triple_loader, generator, discriminator, 
             break
         
         ################################################## patch training
-        data, coord_h, coord_w = next(loader)
+        data, coord_h, coord_w, structure_match_crop_params = next(loader)
         key = np.random.randint(n_scales)
         real_stack = data[key].to(device)
         coord_h = coord_h.to(device)
@@ -211,7 +359,12 @@ def train(args, loader, coarse_loader, triple_loader, generator, discriminator, 
         fake_pred, fake_pred_coord_h, fake_pred_coord_w = discriminator(fake, key)
         g_loss_main = g_nonsaturating_loss(fake_pred)
         g_loss_aux = args.aux_loss*d_coordinate_l2_loss(coord_h, fake_pred_coord_h, coord_w, fake_pred_coord_w)
-        g_loss = g_loss_main + g_loss_aux
+        g_ema_4x.eval()
+        converted_full = convert_to_coord_format(converted.size(0), int(args.size/4), int(args.size/4), device,
+                                                    integer_values=args.coords_integer_values)
+        structure_4x_img, _ = g_ema_4x(converted_full, noise)
+        g_loss_structure_4x = args.structure_loss_4x*g_structure_l2_loss(fake_img, structure_4x_img, structure_match_crop_params)
+        g_loss = g_loss_main + g_loss_aux + g_loss_structure_4x
 
         # loss_dict['g'] = g_loss
         # loss_dict['g_main'] = g_loss_main
@@ -220,172 +373,12 @@ def train(args, loader, coarse_loader, triple_loader, generator, discriminator, 
         loss_dict['1xpatch_g'] = g_loss
         loss_dict['1xpatch_g_main'] = g_loss_main
         loss_dict['1xpatch_g_aux'] = g_loss_aux
+        loss_dict['1xpatch_g_structure_4x'] = g_loss_structure_4x
 
         generator.zero_grad()
         g_loss.backward()
         g_optim.step()
         ################################################## patch training
-
-        ################################################## coarse training
-        data = next(coarse_loader)
-        key = np.random.randint(n_scales)
-        real_stack = data[key].to(device)
-
-        real_img, converted = real_stack[:, :3], real_stack[:, 3:]
-
-        requires_grad(generator, False)
-        requires_grad(coarse_discriminator, True)
-
-        noise = mixing_noise(args.batch, args.latent, args.mixing, device)
-
-        fake_img, _ = generator(converted, noise)
-        fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
-        fake_pred = coarse_discriminator(fake, key)
-
-        real = real_img if args.img2dis else real_stack
-        real_pred = coarse_discriminator(real, key)
-        d_loss = d_logistic_loss(real_pred, fake_pred)
-
-        # loss_dict['d'] += d_loss
-        # loss_dict['d_main'] += d_loss
-        # loss_dict['real_score'] += real_pred.mean()
-        # loss_dict['fake_score'] += fake_pred.mean()
-
-        loss_dict['4ximage_d'] = d_loss
-        loss_dict['4ximage_d_main'] = d_loss
-        loss_dict['4ximage_real_score'] = real_pred.mean()
-        loss_dict['4ximage_fake_score'] = fake_pred.mean()
-
-        coarse_discriminator.zero_grad()
-        d_loss.backward()
-        coarse_d_optim.step()
-
-        d_regularize = i % args.coarse_d_reg_every == 0
-
-        if d_regularize:
-            real.requires_grad = True
-            real_pred = coarse_discriminator(real, key)
-            r1_loss = d_r1_loss(real_pred, real)
-
-            coarse_discriminator.zero_grad()
-            (args.coarse_r1 / 2 * r1_loss * args.coarse_d_reg_every + 0 * real_pred[0]).backward()
-
-            coarse_d_optim.step()
-
-        # loss_dict['r1'] += r1_loss
-
-        loss_dict['4ximage_r1'] = r1_loss
-
-        requires_grad(generator, True)
-        requires_grad(coarse_discriminator, False)
-
-        noise = mixing_noise(args.batch, args.latent, args.mixing, device)
-
-        fake_img, _ = generator(converted, noise)
-        fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
-        fake_pred = coarse_discriminator(fake, key)
-        g_loss = g_nonsaturating_loss(fake_pred)
-
-        # loss_dict['g'] += g_loss
-        # loss_dict['g_main'] += g_loss
-
-        loss_dict['4ximage_g'] = g_loss
-        loss_dict['4ximage_g_main'] = g_loss
-
-        generator.zero_grad()
-        g_loss.backward()
-        g_optim.step()
-        ################################################## coarse training
-
-        ################################################## triple training
-        data, coord_h, coord_w = next(triple_loader)
-        key = np.random.randint(n_scales)
-        real_stack = data[key].to(device)
-        coord_h = coord_h.to(device)
-        coord_w = coord_w.to(device)
-
-        real_img, converted = real_stack[:, :3], real_stack[:, 3:]
-
-        requires_grad(generator, False)
-        requires_grad(triple_discriminator, True)
-
-        noise = mixing_noise(args.batch, args.latent, args.mixing, device)
-
-        fake_img, _ = generator(converted, noise)
-        fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
-        fake_pred, fake_pred_coord_h, fake_pred_coord_w = triple_discriminator(fake, key)
-
-        real = real_img if args.img2dis else real_stack
-        real_pred, real_pred_coord_h, real_pred_coord_w = triple_discriminator(real, key)
-        d_loss_main = d_logistic_loss(real_pred, fake_pred)
-        d_loss_aux = args.triple_aux_loss*d_coordinate_l2_loss(coord_h, real_pred_coord_h, coord_w, real_pred_coord_w) + args.triple_aux_loss*d_coordinate_l2_loss(coord_h, fake_pred_coord_h, coord_w, fake_pred_coord_w)
-        d_loss = d_loss_main + d_loss_aux
-
-        # loss_dict['d'] += d_loss
-        # loss_dict['d'] /= 3
-        # loss_dict['d_main'] += d_loss_main
-        # loss_dict['d_main'] /= 3
-        # loss_dict['d_aux'] += d_loss_aux
-        # loss_dict['d_aux'] /= 2
-        # loss_dict['real_score'] += real_pred.mean()
-        # loss_dict['real_score'] /= 3
-        # loss_dict['fake_score'] += fake_pred.mean()
-        # loss_dict['fake_score'] /= 3
-
-        loss_dict['2xpatch_d'] = d_loss
-        loss_dict['2xpatch_d_main'] = d_loss_main
-        loss_dict['2xpatch_d_aux'] = d_loss_aux
-        loss_dict['2xpatch_real_score'] = real_pred.mean()
-        loss_dict['2xpatch_fake_score'] = fake_pred.mean()
-
-        triple_discriminator.zero_grad()
-        d_loss.backward()
-        triple_d_optim.step()
-
-        d_regularize = i % args.triple_d_reg_every == 0
-
-        if d_regularize:
-            real.requires_grad = True
-            real_pred, _, _ = triple_discriminator(real, key)
-            r1_loss = d_r1_loss(real_pred, real)
-
-            triple_discriminator.zero_grad()
-            (args.triple_r1 / 2 * r1_loss * args.triple_d_reg_every + 0 * real_pred[0]).backward()
-
-            triple_d_optim.step()
-
-        # loss_dict['r1'] += r1_loss
-        # loss_dict['r1'] /= 3
-
-        loss_dict['2xpatch_r1'] = r1_loss
-
-        requires_grad(generator, True)
-        requires_grad(triple_discriminator, False)
-
-        noise = mixing_noise(args.batch, args.latent, args.mixing, device)
-
-        fake_img, _ = generator(converted, noise)
-        fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
-        fake_pred, fake_pred_coord_h, fake_pred_coord_w = triple_discriminator(fake, key)
-        g_loss_main = g_nonsaturating_loss(fake_pred)
-        g_loss_aux = args.triple_aux_loss*d_coordinate_l2_loss(coord_h, fake_pred_coord_h, coord_w, fake_pred_coord_w)
-        g_loss = g_loss_main + g_loss_aux
-
-        # loss_dict['g'] += g_loss
-        # loss_dict['g'] /= 3
-        # loss_dict['g_main'] += g_loss_main
-        # loss_dict['g_main'] /= 3
-        # loss_dict['g_aux'] += g_loss_aux
-        # loss_dict['g_aux'] /= 2
-
-        loss_dict['2xpatch_g'] = g_loss
-        loss_dict['2xpatch_g_main'] = g_loss_main
-        loss_dict['2xpatch_g_aux'] = g_loss_aux
-
-        generator.zero_grad()
-        g_loss.backward()
-        g_optim.step()
-        ################################################## triple training
 
         loss_dict['path'] = path_loss
         loss_dict['path_length'] = path_lengths.mean()
@@ -412,36 +405,27 @@ def train(args, loader, coarse_loader, triple_loader, generator, discriminator, 
         patch1x_g_loss_val = loss_reduced['1xpatch_g'].mean().item()
         patch1x_g_loss_main_val = loss_reduced['1xpatch_g_main'].mean().item()
         patch1x_g_loss_aux_val = loss_reduced['1xpatch_g_aux'].mean().item()
+        patch1x_g_loss_structure_4x_val = loss_reduced['1xpatch_g_structure_4x'].mean().item()
         patch1x_r1_val = loss_reduced['1xpatch_r1'].mean().item()
         patch1x_real_score_val = loss_reduced['1xpatch_real_score'].mean().item()
         patch1x_fake_score_val = loss_reduced['1xpatch_fake_score'].mean().item()
 
-        image4x_d_loss_val = loss_reduced['4ximage_d'].mean().item()
-        image4x_d_loss_main_val = loss_reduced['4ximage_d_main'].mean().item()
-        image4x_g_loss_val = loss_reduced['4ximage_g'].mean().item()
-        image4x_g_loss_main_val = loss_reduced['4ximage_g_main'].mean().item()
-        image4x_r1_val = loss_reduced['4ximage_r1'].mean().item()
-        image4x_real_score_val = loss_reduced['4ximage_real_score'].mean().item()
-        image4x_fake_score_val = loss_reduced['4ximage_fake_score'].mean().item()
+        # image4x_d_loss_val = loss_reduced['4ximage_d'].mean().item()
+        # image4x_d_loss_main_val = loss_reduced['4ximage_d_main'].mean().item()
+        # image4x_g_loss_val = loss_reduced['4ximage_g'].mean().item()
+        # image4x_g_loss_main_val = loss_reduced['4ximage_g_main'].mean().item()
+        # image4x_r1_val = loss_reduced['4ximage_r1'].mean().item()
+        # image4x_real_score_val = loss_reduced['4ximage_real_score'].mean().item()
+        # image4x_fake_score_val = loss_reduced['4ximage_fake_score'].mean().item()
 
-        patch2x_d_loss_val = loss_reduced['2xpatch_d'].mean().item()
-        patch2x_d_loss_main_val = loss_reduced['2xpatch_d_main'].mean().item()
-        patch2x_d_loss_aux_val = loss_reduced['2xpatch_d_aux'].mean().item()
-        patch2x_g_loss_val = loss_reduced['2xpatch_g'].mean().item()
-        patch2x_g_loss_main_val = loss_reduced['2xpatch_g_main'].mean().item()
-        patch2x_g_loss_aux_val = loss_reduced['2xpatch_g_aux'].mean().item()
-        patch2x_r1_val = loss_reduced['2xpatch_r1'].mean().item()
-        patch2x_real_score_val = loss_reduced['2xpatch_real_score'].mean().item()
-        patch2x_fake_score_val = loss_reduced['2xpatch_fake_score'].mean().item()
-
-        d_loss_val = (patch1x_d_loss_val + image4x_d_loss_val + patch2x_d_loss_val) / 3
-        g_loss_val = (patch1x_g_loss_val + image4x_g_loss_val + patch2x_g_loss_val) / 3
-        r1_val = (patch1x_r1_val + image4x_r1_val + patch2x_r1_val) / 3
+        d_loss_val = (patch1x_d_loss_val + image4x_d_loss_val) / 2
+        g_loss_val = (patch1x_g_loss_val + image4x_g_loss_val) / 2
+        r1_val = (patch1x_r1_val + image4x_r1_val) / 2
 
         if get_rank() == 0:
             pbar.set_description(
                 (
-                    f'd: {d_loss_val:.4f}; g: {g_loss_val:.4f}; r1: {r1_val:.4f}; '
+                    f'd: {(d_loss_val):.4f}; g: {g_loss_val:.4f}; r1: {r1_val:.4f}; '
                     f'path: {path_loss_val:.4f}; mean path: {mean_path_length_avg:.4f}'
                 )
             )
@@ -464,41 +448,30 @@ def train(args, loader, coarse_loader, triple_loader, generator, discriminator, 
                     Patch1x_Generator=patch1x_g_loss_val,
                     Patch1x_G_main=patch1x_g_loss_main_val,
                     Patch1x_G_aux=patch1x_g_loss_aux_val,
+                    Patch1x_G_structure_4x=patch1x_g_loss_structure_4x_val,
                     Patch1x_Discriminator=patch1x_d_loss_val,
                     Patch1x_D_main=patch1x_d_loss_main_val,
                     Patch1x_D_aux=patch1x_d_loss_aux_val,
                     Patch1x_R1=patch1x_r1_val,
                     Patch1x_RealScore=patch1x_real_score_val,
                     Patch1x_FakeScore=patch1x_fake_score_val,
-                    Image4x_Generator=image4x_g_loss_val,
-                    Image4x_G_main=image4x_g_loss_main_val,
-                    Image4x_Discriminator=image4x_d_loss_val,
-                    Image4x_D_main=image4x_d_loss_main_val,
-                    Image4x_R1=image4x_r1_val,
-                    Image4x_RealScore=image4x_real_score_val,
-                    Image4x_FakeScore=image4x_fake_score_val,
-                    Patch2x_Generator=patch2x_g_loss_val,
-                    Patch2x_G_main=patch2x_g_loss_main_val,
-                    Patch2x_G_aux=patch2x_g_loss_aux_val,
-                    Patch2x_Discriminator=patch2x_d_loss_val,
-                    Patch2x_D_main=patch2x_d_loss_main_val,
-                    Patch2x_D_aux=patch2x_d_loss_aux_val,
-                    Patch2x_R1=patch2x_r1_val,
-                    Patch2x_RealScore=patch2x_real_score_val,
-                    Patch2x_FakeScore=patch2x_fake_score_val)
-                else:
-                    writer.add_scalar("Generator", g_loss_val, i)
-                    writer.add_scalar("G main", g_loss_main_val, i)
-                    writer.add_scalar("G aux", g_loss_aux_val, i)
-                    writer.add_scalar("Discriminator", d_loss_val, i)
-                    writer.add_scalar("D main", d_loss_main_val, i)
-                    writer.add_scalar("D aux", d_loss_aux_val, i)
-                    writer.add_scalar("R1", r1_val, i)
-                    writer.add_scalar("Path Length Regularization", path_loss_val, i)
-                    writer.add_scalar("Mean Path Length", mean_path_length, i)
-                    writer.add_scalar("Real Score", real_score_val, i)
-                    writer.add_scalar("Fake Score", fake_score_val, i)
-                    writer.add_scalar("Path Length", path_length_val, i)
+                    # Image4x_Generator=image4x_g_loss_val,
+                    # Image4x_G_main=image4x_g_loss_main_val,
+                    # Image4x_Discriminator=image4x_d_loss_val,
+                    # Image4x_D_main=image4x_d_loss_main_val,
+                    # Image4x_R1=image4x_r1_val,
+                    # Image4x_RealScore=image4x_real_score_val,
+                    # Image4x_FakeScore=image4x_fake_score_val)
+                    )
+                # else:
+                    # writer.add_scalar("Generator", g_loss_val, i)
+                    # writer.add_scalar("Discriminator", d_loss_val, i)
+                    # writer.add_scalar("R1", r1_val, i)
+                    # writer.add_scalar("Path Length Regularization", path_loss_val, i)
+                    # writer.add_scalar("Mean Path Length", mean_path_length, i)
+                    # writer.add_scalar("Real Score", real_score_val, i)
+                    # writer.add_scalar("Fake Score", fake_score_val, i)
+                    # writer.add_scalar("Path Length", path_length_val, i)
 
             if i % 500 == 0:
                 with torch.no_grad():
@@ -588,50 +561,6 @@ def train(args, loader, coarse_loader, triple_loader, generator, discriminator, 
                             normalize=True,
                             range=(-1, 1),
                         )
-            if i % 500 == 0:
-                with torch.no_grad():
-                    g_ema.eval()
-                    converted_full = convert_to_coord_format(sample_z.size(0), int(args.size/2), int(args.size/2), device,
-                                                             integer_values=args.coords_integer_values)
-                    if args.generate_by_one:
-                        converted_full = convert_to_coord_format(1, int(args.size/2), int(args.size/2), device,
-                                                                 integer_values=args.coords_integer_values)
-                        samples = []
-                        for sz in sample_z:
-                            sample, _ = g_ema(converted_full, [sz.unsqueeze(0)])
-                            samples.append(sample)
-                        sample = torch.cat(samples, 0)
-                    else:
-                        sample, _ = g_ema(converted_full, [sample_z])
-
-                    utils.save_image(
-                        sample,
-                        os.path.join(path, 'outputs', args.output_dir, 'images_2x_mini', f'{str(i).zfill(6)}.png'),
-                        nrow=int(args.n_sample ** 0.5),
-                        normalize=True,
-                        range=(-1, 1),
-                    )
-
-                    if i == 0:
-                        utils.save_image(
-                            fake_img,
-                            os.path.join(
-                                path,
-                                f'outputs/{args.output_dir}/images_2x_mini/fake_patch_{str(key)}_{str(i).zfill(6)}.png'),
-                            nrow=int(fake_img.size(0) ** 0.5),
-                            normalize=True,
-                            range=(-1, 1),
-                        )
-
-                        utils.save_image(
-                            real_img,
-                            os.path.join(
-                                path,
-                                f'outputs/{args.output_dir}/images_2x_mini/real_patch_{str(key)}_{str(i).zfill(6)}.png'),
-                            nrow=int(real_img.size(0) ** 0.5),
-                            normalize=True,
-                            range=(-1, 1),
-                        )
 
             if i % args.save_checkpoint_frequency == 0:
                 torch.save(
@@ -640,6 +569,7 @@ def train(args, loader, coarse_loader, triple_loader, generator, discriminator, 
                         'd': d_module.state_dict(),
                         'coarse_d': coarse_d_module.state_dict(),
                         'g_ema': g_ema.state_dict(),
+                        'g_ema_4x': g_ema_4x.state_dict(),
                         'g_optim': g_optim.state_dict(),
                         'd_optim': d_optim.state_dict(),
                         'coarse_d_optim': coarse_d_optim.state_dict(),
@@ -666,7 +596,6 @@ if __name__ == '__main__':
 
     parser.add_argument('path', type=str)
     parser.add_argument('coarse_path', type=str)
-    parser.add_argument('triple_path', type=str)
     parser.add_argument('--output_dir', type=str)
     parser.add_argument('--out_path', type=str, default='.')
 
@@ -684,7 +613,8 @@ if __name__ == '__main__':
     parser.add_argument('--save_checkpoint_frequency', type=int, default=20000)
     parser.add_argument('--aux_loss', type=float, default=0.1)
     # parser.add_argument('--coarse_aux_loss', type=float, default=0.1)
-    parser.add_argument('--triple_aux_loss', type=float, default=0.1)
+    parser.add_argument('--iter_4x', type=int, default=30000)
+    parser.add_argument('--structure_loss_4x', type=float, default=0.1)
 
     # dataset
     parser.add_argument('--batch', type=int, default=4)
@@ -709,15 +639,12 @@ if __name__ == '__main__':
     # Discriminator params
     parser.add_argument('--Discriminator', type=str, default='Discriminator')
     parser.add_argument('--CoarseDiscriminator', type=str, default='Discriminator')
-    parser.add_argument('--TripleDiscriminator', type=str, default='Discriminator')
     parser.add_argument('--d_reg_every', type=int, default=16)
     parser.add_argument('--r1', type=float, default=10)
     parser.add_argument('--img2dis',  action='store_true')
     parser.add_argument('--n_first_layers', type=int, default=0)
     parser.add_argument('--coarse_d_reg_every', type=int, default=16)
     parser.add_argument('--coarse_r1', type=float, default=10)
-    parser.add_argument('--triple_d_reg_every', type=int, default=16)
-    parser.add_argument('--triple_r1', type=float, default=10)
 
     args = parser.parse_args()
     path = args.out_path
@@ -728,12 +655,9 @@ if __name__ == '__main__':
     print('Discriminator', Discriminator)
     CoarseDiscriminator = getattr(model, args.CoarseDiscriminator)
     print('CoarseDiscriminator', CoarseDiscriminator)
-    TripleDiscriminator = getattr(model, args.TripleDiscriminator)
-    print('TripleDiscriminator', TripleDiscriminator)
 
     os.makedirs(os.path.join(path, 'outputs', args.output_dir, 'images'), exist_ok=True)
     os.makedirs(os.path.join(path, 'outputs', args.output_dir, 'images_4x_mini'), exist_ok=True)
-    os.makedirs(os.path.join(path, 'outputs', args.output_dir, 'images_2x_mini'), exist_ok=True)
     os.makedirs(os.path.join(path, 'outputs', args.output_dir, 'checkpoints'), exist_ok=True)
     args.logdir = os.path.join(path, 'tensorboard', args.output_dir)
     os.makedirs(args.logdir, exist_ok=True)
@@ -769,20 +693,20 @@ if __name__ == '__main__':
         size=int(args.crop/args.patch_multiplier), channel_multiplier=args.channel_multiplier, n_scales=n_scales, input_size=args.dis_input_size,
         n_first_layers=args.n_first_layers,
     ).to(device)
-    triple_discriminator = TripleDiscriminator(
-        size=int(args.crop/args.patch_multiplier), channel_multiplier=args.channel_multiplier, n_scales=n_scales, input_size=args.dis_input_size,
-        n_first_layers=args.n_first_layers,
-    ).to(device)
     g_ema = Generator(size=args.size, hidden_size=args.fc_dim, style_dim=args.latent, n_mlp=args.n_mlp,
                       activation=args.activation, channel_multiplier=args.channel_multiplier
                       ).to(device)
     g_ema.eval()
     accumulate(g_ema, generator, 0)
+    g_ema_4x = Generator(size=args.size, hidden_size=args.fc_dim, style_dim=args.latent, n_mlp=args.n_mlp,
+                      activation=args.activation, channel_multiplier=args.channel_multiplier
+                      ).to(device)
+    g_ema_4x.eval()
+    accumulate(g_ema_4x, generator, 0)
 
     g_reg_ratio = args.g_reg_every / (args.g_reg_every + 1)
     d_reg_ratio = args.d_reg_every / (args.d_reg_every + 1)
     coarse_d_reg_ratio = args.coarse_d_reg_every / (args.coarse_d_reg_every + 1)
-    triple_d_reg_ratio = args.triple_d_reg_every / (args.triple_d_reg_every + 1)
 
     g_optim = optim.Adam(
         generator.parameters(),
@@ -798,11 +722,6 @@ if __name__ == '__main__':
         coarse_discriminator.parameters(),
         lr=args.lr * coarse_d_reg_ratio,
         betas=(0 ** coarse_d_reg_ratio, 0.99 ** coarse_d_reg_ratio),
-    )
-    triple_d_optim = optim.Adam(
-        triple_discriminator.parameters(),
-        lr=args.lr * triple_d_reg_ratio,
-        betas=(0 ** triple_d_reg_ratio, 0.99 ** triple_d_reg_ratio),
     )
 
     if args.ckpt is not None:
@@ -820,13 +739,12 @@ if __name__ == '__main__':
         generator.load_state_dict(ckpt['g'])
         discriminator.load_state_dict(ckpt['d'])
         coarse_discriminator.load_state_dict(ckpt['coarse_d'])
-        triple_discriminator.load_state_dict(ckpt['triple_d'])
         g_ema.load_state_dict(ckpt['g_ema'])
+        g_ema_4x.load_state_dict(ckpt['g_ema_4x'])
 
         g_optim.load_state_dict(ckpt['g_optim'])
         d_optim.load_state_dict(ckpt['d_optim'])
         coarse_d_optim.load_state_dict(ckpt['coarse_d_optim'])
-        triple_d_optim.load_state_dict(ckpt['triple_d_optim'])
 
         del ckpt
         torch.cuda.empty_cache()
@@ -853,13 +771,6 @@ if __name__ == '__main__':
             broadcast_buffers=False,
         )
 
-        triple_discriminator = nn.parallel.DistributedDataParallel(
-            triple_discriminator,
-            device_ids=[args.local_rank],
-            output_device=args.local_rank,
-            broadcast_buffers=False,
-        )
-
     transform = transforms.Compose(
         [
             transforms.RandomHorizontalFlip(),
@@ -874,14 +785,11 @@ if __name__ == '__main__':
     if nsml:
         args.path = os.path.join(DATASET_PATH, 'train', args.path.split('/')[-1])
         args.coarse_path = os.path.join(DATASET_PATH, 'train', args.coarse_path.split('/')[-1])
-        args.triple_path = os.path.join(DATASET_PATH, 'train', args.triple_path.split('/')[-1])
     else:
         pass
-    dataset = MultiScalePatchDataset(args.path, transform=transform, resolution=args.coords_size, crop_size=int(args.crop/args.patch_multiplier),
+    dataset = MultiScalePatchProgressiveDataset(args.path, transform=transform, resolution=args.coords_size, crop_size=int(args.crop/args.patch_multiplier),
                                 integer_values=args.coords_integer_values, to_crop=args.to_crop)
     coarse_dataset = MultiScaleDataset(args.coarse_path, transform=transform, resolution=int(args.coords_size/args.patch_multiplier), crop_size=int(args.crop/args.patch_multiplier),
-                                integer_values=args.coords_integer_values, to_crop=args.to_crop)
-    triple_dataset = MultiScalePatchDataset(args.triple_path, transform=transform, resolution=int(args.coords_size/(args.patch_multiplier/2)), crop_size=int(args.crop/args.patch_multiplier),
                                 integer_values=args.coords_integer_values, to_crop=args.to_crop)
     fid_dataset = ImageDataset(args.path, transform=transform_fid, resolution=args.coords_size, to_crop=args.to_crop)
     fid_dataset.length = args.fid_samples
@@ -901,15 +809,7 @@ if __name__ == '__main__':
         num_workers=args.num_workers,
         pin_memory=True,
     )
-    triple_loader = data.DataLoader(
-        triple_dataset,
-        batch_size=args.batch,
-        sampler=data_sampler(triple_dataset, shuffle=True, distributed=args.distributed),
-        drop_last=True,
-        num_workers=args.num_workers,
-        pin_memory=True,
-    )
 
     writer = SummaryWriter(log_dir=args.logdir)
 
-    train(args, loader, coarse_loader, triple_loader, generator, discriminator, coarse_discriminator, triple_discriminator, g_optim, d_optim, coarse_d_optim, triple_d_optim, g_ema, device, fid_dataset)
+    train(args, loader, coarse_loader, generator, discriminator, coarse_discriminator, g_optim, d_optim, coarse_d_optim, g_ema, g_ema_4x, device, fid_dataset)

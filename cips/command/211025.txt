@@ -1,0 +1,62 @@
+2021.10.25
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_64 --n_worker 8 --size 16
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_64 --n_worker 8 --size 24
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_64 --n_worker 8 --size 32
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_64 --n_worker 8 --size 40
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_64 --n_worker 8 --size 48
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_64 --n_worker 8 --size 56
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_64 --n_worker 8 --size 64
+nsml dataset push celeba_hq_lmdb_64 /home/MS-INR-GAN/data/celeba_hq_lmdb_64 --private
+
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_128 --n_worker 8 --size 32
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_128 --n_worker 8 --size 48
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_128 --n_worker 8 --size 64
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_128 --n_worker 8 --size 80
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_128 --n_worker 8 --size 96
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_128 --n_worker 8 --size 112
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_128 --n_worker 8 --size 128
+nsml dataset push celeba_hq_lmdb_128 /home/MS-INR-GAN/data/celeba_hq_lmdb_128 --private
+
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_256 --n_worker 8 --size 64
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_256 --n_worker 8 --size 96
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_256 --n_worker 8 --size 128
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_256 --n_worker 8 --size 160
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_256 --n_worker 8 --size 192
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_256 --n_worker 8 --size 224
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_256 --n_worker 8 --size 256
+nsml dataset push celeba_hq_lmdb_256 /home/MS-INR-GAN/data/celeba_hq_lmdb_256 --private
+
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_512 --n_worker 8 --size 128
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_512 --n_worker 8 --size 192
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_512 --n_worker 8 --size 256
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_512 --n_worker 8 --size 320
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_512 --n_worker 8 --size 384
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_512 --n_worker 8 --size 448
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_512 --n_worker 8 --size 512
+nsml dataset push celeba_hq_lmdb_512 /home/MS-INR-GAN/data/celeba_hq_lmdb_512 --private
+
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_1024 --n_worker 8 --size 256
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_1024 --n_worker 8 --size 384
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_1024 --n_worker 8 --size 512
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_1024 --n_worker 8 --size 640
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_1024 --n_worker 8 --size 768
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_1024 --n_worker 8 --size 896
+CUDA_VISIBLE_DEVICES=0 python prepare_data.py images /home/MS-INR-GAN/data/celeba_hq/ --out /home/MS-INR-GAN/data/celeba_hq_lmdb_1024 --n_worker 8 --size 1024
+nsml dataset push celeba_hq_lmdb_1024 /home/MS-INR-GAN/data/celeba_hq_lmdb_1024 --private
+
+nsml run -d celeba_hq_lmdb -g 2 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_ddp.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb/64 --output_dir=experiment --distributed=True --world_size=2 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=64 --num_workers=16 --crop=64 --coords_size=64 \
+--Generator=CIPSskip --size=64 --fc_dim=32 --latent=32 --n_mlp=5 \
+--img2dis" \
+-m "ddp_test" --gpu-driver-version "440"
+
+python train_ddp.py \
+/home/MS-INR-GAN/data/celeba_hq_lmdb/64 --output_dir=experiment --distributed=True --world_size=2 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=64 --num_workers=16 --crop=64 --coords_size=64 \
+--Generator=CIPSskip --size=64 --fc_dim=32 --latent=32 --n_mlp=5 \
+--img2dis

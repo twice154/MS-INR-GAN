@@ -13,6 +13,21 @@ def convert_to_coord_format(b, h, w, device='cpu', integer_values=False):
     return torch.cat((x_channel, y_channel), dim=1)
 
 
+def convert_to_coord_format_mip(b, h, w, device='cpu', integer_values=False):
+    if integer_values:
+        x_channel = torch.arange(w+1, dtype=torch.float, device=device).view(1, 1, 1, -1).repeat(b, 1, w+1, 1)
+        y_channel = torch.arange(h+1, dtype=torch.float, device=device).view(1, 1, -1, 1).repeat(b, 1, 1, h+1)
+    else:
+        x_channel = torch.linspace(-1, 1, w+1, device=device).view(1, 1, 1, -1).repeat(b, 1, w+1, 1)
+        y_channel = torch.linspace(-1, 1, h+1, device=device).view(1, 1, -1, 1).repeat(b, 1, 1, h+1)
+    x1_channel = x_channel[:, :, :-1, :-1]
+    x2_channel = x_channel[:, :, 1:, 1:]
+    y1_channel = y_channel[:, :, :-1, :-1]
+    y2_channel = y_channel[:, :, 1:, 1:]
+    channel = torch.cat((x1_channel, y2_channel, x2_channel, y1_channel, x1_channel, y1_channel, x2_channel, y2_channel, y2_channel - y1_channel, x2_channel - x1_channel), dim=1)
+    return channel
+
+
 def random_crop(tensor, size):
     assert tensor.dim() == 4, tensor.shape  # frames x channels x h x w
     h, w = tensor.shape[-2:]
@@ -26,6 +41,14 @@ def random_crop_with_reproducible(tensor, size):
     h, w = tensor.shape[-2:]
     h_start = random.randint(0, h - size) if h - size > 0 else 0
     w_start = random.randint(0, w - size) if w - size > 0 else 0
+    return tensor[:, :, h_start: h_start + size, w_start: w_start + size], (h, w, h_start, w_start, size)
+
+
+def random_crop_from_reproducible(tensor, size, h_start_from, h_start_to, w_start_from, w_start_to):
+    assert tensor.dim() == 4, tensor.shape  # frames x channels x h x w
+    h, w = tensor.shape[-2:]
+    h_start = random.randint(h_start_from, h_start_to - size) if h_start_to - size > 0 else 0
+    w_start = random.randint(w_start_from, w_start_to - size) if w_start_to - size > 0 else 0
     return tensor[:, :, h_start: h_start + size, w_start: w_start + size], (h, w, h_start, w_start, size)
 
 
@@ -43,6 +66,14 @@ class RandomCropWithReproducible:
 
     def __call__(self, tensor):
         return random_crop_with_reproducible(tensor, self.size)
+
+
+class RandomCropFromReproducible:
+    def __init__(self, size):
+        self.size = size
+
+    def __call__(self, tensor, h_start_from, h_start_to, w_start_from, w_start_to):
+        return random_crop_from_reproducible(tensor, self.size, h_start_from, h_start_to, w_start_from, w_start_to)
 
 
 def random_horizontal_flip(tensor):

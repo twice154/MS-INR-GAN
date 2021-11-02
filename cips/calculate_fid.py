@@ -8,13 +8,68 @@ import numpy as np
 
 import model
 from dataset import ImageDataset
-from tensor_transforms import convert_to_coord_format
+from tensor_transforms import convert_to_coord_format, convert_to_coord_format_mip
 
 
 @torch.no_grad()
 def calculate_fid(model, fid_dataset, bs, size, num_batches, latent_size, integer_values,
                   save_dir='fid_imgs', device='cuda'):
     coords = convert_to_coord_format(bs, size, size, device, integer_values=integer_values)
+    print("generate fid samples...")
+    for i in range(num_batches):
+        z = torch.randn(bs, latent_size, device=device)
+        fake_img, _ = model(coords, [z])
+        for j in range(bs):
+            torchvision.utils.save_image(fake_img[j, :, :, :],
+                                         os.path.join(save_dir, '%s.png' % str(i * bs + j).zfill(5)), range=(-1, 1),
+                                         normalize=True)
+    print("calculate fid...")
+    metrics_dict = calculate_metrics(input1=save_dir, input2=fid_dataset, cuda=True, isc=False, fid=True, kid=False, verbose=False)
+    return metrics_dict
+
+
+@torch.no_grad()
+def calculate_fid_ddp(model, fid_dataset, bs, size, num_batches, latent_size, integer_values,
+                  save_dir='fid_imgs', device='cuda'):
+    coords = convert_to_coord_format(bs, size, size, device, integer_values=integer_values)
+    print("generate fid samples...")
+    for i in range(num_batches):
+        z = torch.randn(bs, latent_size, device=device)
+        fake_img, _ = model(coords, [z])
+        for j in range(bs):
+            torchvision.utils.save_image(fake_img[j, :, :, :],
+                                         os.path.join(save_dir, '%s.png' % str(i * bs + j).zfill(5)), range=(-1, 1),
+                                         normalize=True)
+    print("calculate fid...")
+    metrics_dict = calculate_metrics(input1=save_dir, input2=fid_dataset, cuda=True, isc=False, fid=True, kid=False, verbose=False, save_cpu_ram=True)
+    return metrics_dict
+
+
+@torch.no_grad()
+def calculate_fid_ddp_mip(model, fid_dataset, bs, size, num_batches, latent_size, integer_values,
+                  save_dir='fid_imgs', device='cuda'):
+    coords = convert_to_coord_format_mip(bs, size, size, device, integer_values=integer_values)
+    print("generate fid samples...")
+    for i in range(num_batches):
+        z = torch.randn(bs, latent_size, device=device)
+        fake_img, _ = model(coords, [z])
+        for j in range(bs):
+            torchvision.utils.save_image(fake_img[j, :, :, :],
+                                         os.path.join(save_dir, '%s.png' % str(i * bs + j).zfill(5)), range=(-1, 1),
+                                         normalize=True)
+    print("calculate fid...")
+    metrics_dict = calculate_metrics(input1=save_dir, input2=fid_dataset, cuda=True, isc=False, fid=True, kid=False, verbose=False, save_cpu_ram=True)
+    return metrics_dict
+
+
+@torch.no_grad()
+def calculate_fid_scale(model, fid_dataset, bs, size, num_batches, latent_size, integer_values,
+                  save_dir='fid_imgs', device='cuda'):
+    coords = convert_to_coord_format(bs, size, size, device, integer_values=integer_values)
+    hw = torch.tensor(1 / size).reshape(1, 1, 1, 1)
+    sq = torch.tensor(1 / (size * size)).reshape(1, 1, 1, 1)
+    scales = torch.cat((hw, sq), 1).repeat(bs, 1, size, size).to(device)
+    coords = torch.cat((coords, scales), 1)
     print("generate fid samples...")
     for i in range(num_batches):
         z = torch.randn(bs, latent_size, device=device)

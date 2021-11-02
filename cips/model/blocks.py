@@ -542,6 +542,30 @@ class LFF(nn.Module):
         return x
 
 
+class LFFMip(nn.Module):
+    def __init__(self, hidden_size, ):
+        super(LFFMip, self).__init__()
+        self.ffm = ConLinear(2, hidden_size, is_first=True)
+        self.activation = SinActivation()
+
+    def forward(self, x):
+        x1_y2 = self.ffm(x[:, 0:2, :, :])
+        x1_y2 = self.activation(x1_y2)
+
+        x2_y1 = self.ffm(x[:, 2:4, :, :])
+        x2_y1 = self.activation(x2_y1)
+
+        x1_y1 = self.ffm(x[:, 4:6, :, :])
+        x1_y1 = self.activation(x1_y1)
+
+        x2_y2 = self.ffm(x[:, 6:8, :, :])
+        x2_y2 = self.activation(x2_y2)
+
+        x = (x1_y2 + x2_y1 - x1_y1 - x2_y2) / (x[:, 8, :, :] * x[:, 9, :, :]).reshape(x.shape[0], 1, x.shape[2], x.shape[3]).repeat(1, x1_y2.shape[1], 1, 1)
+
+        return x
+
+
 class ScaledLeakyReLUSin(nn.Module):
     def __init__(self, negative_slope=0.2):
         super().__init__()
