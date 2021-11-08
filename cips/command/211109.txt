@@ -1,0 +1,10 @@
+2021.11.09
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "16G" --shm-size "8GB" --cpus 4 -e "train_cips_double_progressive_pe.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=60000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --gradlock_iter=20000 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatchpgpe --size=64 --fc_dim=512 --latent=512 --n_mlp=8 --unmasking_ratio1=0.25 --unmasking_ratio2=1.0 \
+--img2dis" \
+-m "cips_64_double_progressive_str0.01_pe0.25pe1.0_full_fair" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/

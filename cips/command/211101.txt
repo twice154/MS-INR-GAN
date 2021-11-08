@@ -1,4 +1,4 @@
-2021.10.30
+2021.11.01
 nsml run -d celeba_hq_lmdb_128 -g 1 --memory "16G" --shm-size "8GB" --cpus 4 -e "train_cips_quintuple_progressive.py" \
 -a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/48 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/96 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
 --fid_samples=10000 --fid_batch=16 \
