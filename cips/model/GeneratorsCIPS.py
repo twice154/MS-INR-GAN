@@ -797,6 +797,67 @@ class CIPSskippatchpgpe(nn.Module):
         # self.conv1.conv.weight.grad.mul_(conv1_weight_mask)
 
 
+    def update_pe_activation_mask(self, unmasking_ratio, device):
+        # print(self.lff.ffm.conv.weight.shape) = torch.Size([512, 2, 1, 1])
+        # print(self.lff.ffm.conv.bias.shape) = torch.Size([512])
+        # print(self.conv1.conv.weight.shape) = torch.Size([1, 512, 512, 1, 1])
+
+        self.pe_activation_mask = torch.zeros(1, self.hidden_size, 1, 1).to(device)
+
+        full_dim = self.hidden_size
+        unmask_dim = int(self.hidden_size * unmasking_ratio)
+        mask_dim = full_dim - unmask_dim
+
+        for i in range(unmask_dim):
+            self.pe_activation_mask[0][i][0][0] += 1
+        # pe_weight_mask = torch.cat((torch.ones(unmask_dim, self.lff.ffm.conv.weight.shape[1], 1, 1), torch.zeros(mask_dim, self.lff.ffm.conv.weight.shape[1], 1, 1)), 0).to(device)
+        # pe_bias_mask = torch.cat((torch.ones(unmask_dim), torch.zeros(mask_dim)), 0).to(device)
+        # conv1_weight_mask = torch.cat((torch.ones(1, self.conv1.conv.weight.shape[1], unmask_dim, 1, 1), torch.zeros(1, self.conv1.conv.weight.shape[1], mask_dim, 1, 1)), 2).to(device)
+
+        # self.lff.ffm.conv.weight.data.mul_(pe_weight_mask)
+        # self.lff.ffm.conv.bias.data.mul_(pe_bias_mask)
+        # self.conv1.conv.weight.data.mul_(conv1_weight_mask)
+
+
+    def progressive_open_pe_activation_mask(self, unmasking_ratio, previous_unmasking_ratio, total_iteration, current_iteration, device):
+        # print(self.lff.ffm.conv.weight.shape) = torch.Size([512, 2, 1, 1])
+        # print(self.lff.ffm.conv.bias.shape) = torch.Size([512])
+        # print(self.conv1.conv.weight.shape) = torch.Size([1, 512, 512, 1, 1])
+
+        full_dim = self.hidden_size
+        unmask_dim = int(self.hidden_size * previous_unmasking_ratio)
+        pg_unmask_dim = int(self.hidden_size * unmasking_ratio)
+        mask_dim = full_dim - pg_unmask_dim
+
+        if current_iteration % (total_iteration / 10) == 0:
+            for i in range(unmask_dim, pg_unmask_dim):
+                if self.pe_activation_mask[0][i][0][0] >= 1:
+                    self.pe_activation_mask[0][i][0][0] = 1
+                else:
+                    self.pe_activation_mask[0][i][0][0] += 0.1
+
+
+    def progressive_and_smooth_open_pe_activation_mask(self, unmasking_ratio, previous_unmasking_ratio, total_iteration, current_iteration, device):
+        # print(self.lff.ffm.conv.weight.shape) = torch.Size([512, 2, 1, 1])
+        # print(self.lff.ffm.conv.bias.shape) = torch.Size([512])
+        # print(self.conv1.conv.weight.shape) = torch.Size([1, 512, 512, 1, 1])
+
+        full_dim = self.hidden_size
+        unmask_dim = int(self.hidden_size * previous_unmasking_ratio)
+        pg_unmask_dim = int(self.hidden_size * unmasking_ratio)
+        mask_dim = full_dim - pg_unmask_dim
+
+        if current_iteration % (total_iteration / (2 * pg_unmask_dim)) == 0:
+            for i in range(unmask_dim, pg_unmask_dim):
+                if self.pe_activation_mask[0][i][0][0] >= 1:
+                    self.pe_activation_mask[0][i][0][0] = 1
+                else:
+                    self.pe_activation_mask[0][i][0][0] += 0.1
+                    if self.pe_activation_mask[0][i][0][0] == 0.1:
+                        break
+        print(torch.sum(self.pe_activation_mask))
+
+
     def forward(self,
                 coords,
                 latent,
@@ -804,6 +865,7 @@ class CIPSskippatchpgpe(nn.Module):
                 truncation=1,
                 truncation_latent=None,
                 input_is_latent=False,
+                progressive_pe_activation=False,
                 ):
 
         latent = latent[0]
@@ -815,6 +877,8 @@ class CIPSskippatchpgpe(nn.Module):
             latent = self.style(latent)
 
         x = self.lff(coords)
+        if progressive_pe_activation:
+            x = x * self.pe_activation_mask.repeat(x.shape[0], 1, 1, 1)
 
         # batch_size, _, w, h = coords.shape
         # if self.training:

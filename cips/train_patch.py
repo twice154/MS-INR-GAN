@@ -154,17 +154,17 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
 
         fake_img, _ = generator(converted, noise)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
-        fake_pred, fake_pred_coord_h, fake_pred_coord_w = discriminator(fake, key)
+        fake_pred = discriminator(fake, key)
 
         real = real_img if args.img2dis else real_stack
-        real_pred, real_pred_coord_h, real_pred_coord_w = discriminator(real, key)
+        real_pred = discriminator(real, key)
         d_loss_main = d_logistic_loss(real_pred, fake_pred)
-        d_loss_aux = args.aux_loss*d_coordinate_l2_loss(coord_h, real_pred_coord_h, coord_w, real_pred_coord_w) + args.aux_loss*d_coordinate_l2_loss(coord_h, fake_pred_coord_h, coord_w, fake_pred_coord_w)
-        d_loss = d_loss_main + d_loss_aux
+        #d_loss_aux = args.aux_loss*d_coordinate_l2_loss(coord_h, real_pred_coord_h, coord_w, real_pred_coord_w) + args.aux_loss*d_coordinate_l2_loss(coord_h, fake_pred_coord_h, coord_w, fake_pred_coord_w)
+        d_loss = d_loss_main #+ d_loss_aux
 
         loss_dict['d'] = d_loss
         loss_dict['d_main'] = d_loss_main
-        loss_dict['d_aux'] = d_loss_aux
+        #loss_dict['d_aux'] = d_loss_aux
         loss_dict['real_score'] = real_pred.mean()
         loss_dict['fake_score'] = fake_pred.mean()
 
@@ -176,7 +176,7 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
 
         if d_regularize:
             real.requires_grad = True
-            real_pred, _, _ = discriminator(real, key)
+            real_pred = discriminator(real, key)
             r1_loss = d_r1_loss(real_pred, real)
 
             discriminator.zero_grad()
@@ -193,14 +193,14 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
 
         fake_img, _ = generator(converted, noise)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
-        fake_pred, fake_pred_coord_h, fake_pred_coord_w = discriminator(fake, key)
+        fake_pred = discriminator(fake, key)
         g_loss_main = g_nonsaturating_loss(fake_pred)
-        g_loss_aux = args.aux_loss*d_coordinate_l2_loss(coord_h, fake_pred_coord_h, coord_w, fake_pred_coord_w)
-        g_loss = g_loss_main + g_loss_aux
+        #g_loss_aux = args.aux_loss*d_coordinate_l2_loss(coord_h, fake_pred_coord_h, coord_w, fake_pred_coord_w)
+        g_loss = g_loss_main #+ g_loss_aux
 
         loss_dict['g'] = g_loss
         loss_dict['g_main'] = g_loss_main
-        loss_dict['g_aux'] = g_loss_aux
+        #loss_dict['g_aux'] = g_loss_aux
 
         generator.zero_grad()
         g_loss.backward()
@@ -215,10 +215,10 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
 
         d_loss_val = loss_reduced['d'].mean().item()
         d_loss_main_val = loss_reduced['d_main'].mean().item()
-        d_loss_aux_val = loss_reduced['d_aux'].mean().item()
+        #d_loss_aux_val = loss_reduced['d_aux'].mean().item()
         g_loss_val = loss_reduced['g'].mean().item()
         g_loss_main_val = loss_reduced['g_main'].mean().item()
-        g_loss_aux_val = loss_reduced['g_aux'].mean().item()
+        #g_loss_aux_val = loss_reduced['g_aux'].mean().item()
         r1_val = loss_reduced['r1'].mean().item()
         path_loss_val = loss_reduced['path'].mean().item()
         real_score_val = loss_reduced['real_score'].mean().item()
@@ -238,10 +238,10 @@ def train(args, loader, generator, discriminator, g_optim, d_optim, g_ema, devic
                     nsml.report(summary=True, step=i,
                     Generator=g_loss_val,
                     G_main=g_loss_main_val,
-                    G_aux=g_loss_aux_val,
+                    #G_aux=g_loss_aux_val,
                     Discriminator=d_loss_val,
                     D_main=d_loss_main_val,
-                    D_aux=d_loss_aux_val,
+                    #D_aux=d_loss_aux_val,
                     R1=r1_val,
                     PathLengthRegularization=path_loss_val,
                     MeanPathLength=mean_path_length,
@@ -392,7 +392,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=0.002)
     parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument('--save_checkpoint_frequency', type=int, default=20000)
-    parser.add_argument('--aux_loss', type=float, default=0.1)
+    #parser.add_argument('--aux_loss', type=float, default=0.1)
 
     # dataset
     parser.add_argument('--batch', type=int, default=4)

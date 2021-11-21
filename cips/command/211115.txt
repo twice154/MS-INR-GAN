@@ -1,0 +1,480 @@
+2021.11.15
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_pe_pgopen.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=40000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --pgopen_iter=10000 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatchpgpe --size=64 --fc_dim=512 --latent=512 --n_mlp=8 --unmasking_ratio1=0.33 --unmasking_ratio2=0.66 --unmasking_ratio3=1.0 \
+--img2dis" \
+-m "cips_64_triple_progressive_str0.01str20.01_pe0.33pe0.66pe1.0pgopen0.25_full_fair" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/143
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_pe_pgopen.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=40000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --pgopen_iter=20000 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatchpgpe --size=64 --fc_dim=512 --latent=512 --n_mlp=8 --unmasking_ratio1=0.33 --unmasking_ratio2=0.66 --unmasking_ratio3=1.0 \
+--img2dis" \
+-m "cips_64_triple_progressive_str0.01str20.01_pe0.33pe0.66pe1.0pgopen0.5_full_fair" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/144
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_pe_pgopen.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=40000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --pgopen_iter=30000 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatchpgpe --size=64 --fc_dim=512 --latent=512 --n_mlp=8 --unmasking_ratio1=0.33 --unmasking_ratio2=0.66 --unmasking_ratio3=1.0 \
+--img2dis" \
+-m "cips_64_triple_progressive_str0.01str20.01_pe0.33pe0.66pe1.0pgopen0.75_full_fair" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/145
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_pe_pgopen.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=40000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.1 --pgopen_iter=10000 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatchpgpe --size=128 --fc_dim=512 --latent=512 --n_mlp=8 --unmasking_ratio1=0.25 --unmasking_ratio2=0.5 --unmasking_ratio3=1.0 \
+--img2dis" \
+-m "cips_128_triple_progressive_str0.001str20.1_pe0.25pe0.5pe1.0pgopen0.25_full_fair" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/70
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_pe_pgopen.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=40000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.1 --pgopen_iter=20000 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatchpgpe --size=128 --fc_dim=512 --latent=512 --n_mlp=8 --unmasking_ratio1=0.25 --unmasking_ratio2=0.5 --unmasking_ratio3=1.0 \
+--img2dis" \
+-m "cips_128_triple_progressive_str0.001str20.1_pe0.25pe0.5pe1.0pgopen0.5_full_fair" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/71
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_pe_pgopen.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=40000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.1 --pgopen_iter=30000 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatchpgpe --size=128 --fc_dim=512 --latent=512 --n_mlp=8 --unmasking_ratio1=0.25 --unmasking_ratio2=0.5 --unmasking_ratio3=1.0 \
+--img2dis" \
+-m "cips_128_triple_progressive_str0.001str20.1_pe0.25pe0.5pe1.0pgopen0.75_full_fair" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/72
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_pe_smoothpgopen.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=40000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --pgopen_iter=10000 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatchpgpe --size=64 --fc_dim=512 --latent=512 --n_mlp=8 --unmasking_ratio1=0.33 --unmasking_ratio2=0.66 --unmasking_ratio3=1.0 \
+--img2dis" \
+-m "cips_64_triple_progressive_str0.01str20.01_pe0.33pe0.66pe1.0smoothpgopen0.25_full_fair" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/146
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_pe_smoothpgopen.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=40000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --pgopen_iter=20000 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatchpgpe --size=64 --fc_dim=512 --latent=512 --n_mlp=8 --unmasking_ratio1=0.33 --unmasking_ratio2=0.66 --unmasking_ratio3=1.0 \
+--img2dis" \
+-m "cips_64_triple_progressive_str0.01str20.01_pe0.33pe0.66pe1.0smoothpgopen0.5_full_fair" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/147
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_pe_smoothpgopen.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=40000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --pgopen_iter=30000 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatchpgpe --size=64 --fc_dim=512 --latent=512 --n_mlp=8 --unmasking_ratio1=0.33 --unmasking_ratio2=0.66 --unmasking_ratio3=1.0 \
+--img2dis" \
+-m "cips_64_triple_progressive_str0.01str20.01_pe0.33pe0.66pe1.0smoothpgopen0.75_full_fair" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/148
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_pe_smoothpgopen.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=40000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.1 --pgopen_iter=10000 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatchpgpe --size=128 --fc_dim=512 --latent=512 --n_mlp=8 --unmasking_ratio1=0.25 --unmasking_ratio2=0.5 --unmasking_ratio3=1.0 \
+--img2dis" \
+-m "cips_128_triple_progressive_str0.001str20.1_pe0.25pe0.5pe1.0smoothpgopen0.25_full_fair" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/73
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_pe_smoothpgopen.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=40000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.1 --pgopen_iter=20000 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatchpgpe --size=128 --fc_dim=512 --latent=512 --n_mlp=8 --unmasking_ratio1=0.25 --unmasking_ratio2=0.5 --unmasking_ratio3=1.0 \
+--img2dis" \
+-m "cips_128_triple_progressive_str0.001str20.1_pe0.25pe0.5pe1.0smoothpgopen0.5_full_fair" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/74
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_pe_smoothpgopen.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=40000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.1 --pgopen_iter=30000 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatchpgpe --size=128 --fc_dim=512 --latent=512 --n_mlp=8 --unmasking_ratio1=0.25 --unmasking_ratio2=0.5 --unmasking_ratio3=1.0 \
+--img2dis" \
+-m "cips_128_triple_progressive_str0.001str20.1_pe0.25pe0.5pe1.0smoothpgopen0.75_full_fair" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/75
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.001 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_per0.001per20.001_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/149
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_per0.001per20.01_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/150
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.1 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_per0.001per20.1_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/151
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.001 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_per0.01per20.001_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/152
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_per0.01per20.01_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/153
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.1 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_per0.01per20.1_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/154
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.1 --structure_loss2=0.001 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_per0.1per20.001_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/155
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.1 --structure_loss2=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_per0.1per20.01_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/156
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.1 --structure_loss2=0.1 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_per0.1per20.1_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/157
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.001 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_per0.001per20.001_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/76
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_per0.001per20.01_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/77
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.1 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_per0.001per20.1_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/78
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.001 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_per0.01per20.001_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/79
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_per0.01per20.01_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/80
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.1 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_per0.01per20.1_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/81
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.1 --structure_loss2=0.001 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_per0.1per20.001_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/82
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.1 --structure_loss2=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_per0.1per20.01_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/83
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 16 -e "train_cips_triple_progressive_perceptual.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.1 --structure_loss2=0.1 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_per0.1per20.1_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/84
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.001 --structure_loss2_triple=0.001 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_str0.01str20.001triple0.001_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/172
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.001 --structure_loss2_triple=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_str0.01str20.001triple0.01_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/173
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.001 --structure_loss2_triple=0.1 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_str0.01str20.001triple0.1_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/174
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --structure_loss2_triple=0.001 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_str0.01str20.01triple0.001_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/175
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --structure_loss2_triple=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_str0.01str20.01triple0.01_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/176
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --structure_loss2_triple=0.1 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_str0.01str20.01triple0.1_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/177
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.1 --structure_loss2_triple=0.001 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_str0.01str20.1triple0.001_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/178
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.1 --structure_loss2_triple=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_str0.01str20.1triple0.01_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/179
+
+nsml run -d celeba_hq_lmdb_64 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_64/16 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_64/64 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.1 --structure_loss2_triple=0.1 \
+--batch=64 --num_workers=16 --to_crop --crop=64 --coords_size=64 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=64 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_64_triple_progressive_str0.01str20.1triple0.1_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_64/180
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.001 --structure_loss2_triple=0.001 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_str0.001str20.001triple0.001_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/97
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.001 --structure_loss2_triple=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_str0.001str20.001triple0.01_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/98
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.001 --structure_loss2_triple=0.1 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_str0.001str20.001triple0.1_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/99
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.01 --structure_loss2_triple=0.001 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_str0.001str20.01triple0.001_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/100
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.01 --structure_loss2_triple=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_str0.001str20.01triple0.01_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/101
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.01 --structure_loss2_triple=0.1 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_str0.001str20.01triple0.1_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/102
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.1 --structure_loss2_triple=0.001 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_str0.001str20.1triple0.001_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/103
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.1 --structure_loss2_triple=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_str0.001str20.1triple0.01_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/104
+
+nsml run -d celeba_hq_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_msrecon.py" \
+-a "/home/MS-INR-GAN/data/celeba_hq_lmdb_128/32 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/64 /home/MS-INR-GAN/data/celeba_hq_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.1 --structure_loss2_triple=0.1 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_128_triple_progressive_str0.001str20.1triple0.1_full" --gpu-driver-version "440"
+ailab002/celeba_hq_lmdb_128/105

@@ -429,8 +429,8 @@ def train(args, loader, loader2, loader3, generator, discriminator, g_optim, d_o
 
         generator.zero_grad()
         g_loss.backward()
-        if i < args.gradlock_iter:
-            g_module.lock_grad_pe_mask(unmasking_ratio=args.unmasking_ratio2, device=device)
+        if p2iter < args.gradlock_iter:
+            g_module.lock_grad_pe_mask(unmasking_ratio=args.unmasking_ratio1, device=device)
         g_optim.step()
 
         accumulate(g_ema_temp2, g_module, accum)
@@ -616,7 +616,7 @@ def train(args, loader, loader2, loader3, generator, discriminator, g_optim, d_o
         generator.zero_grad()
         g_loss.backward()
         if i < args.gradlock_iter:
-            g_module.lock_grad_pe_mask(unmasking_ratio=args.unmasking_ratio3, device=device)
+            g_module.lock_grad_pe_mask(unmasking_ratio=args.unmasking_ratio2, device=device)
         g_optim.step()
 
         loss_dict['path'] = path_loss
@@ -981,7 +981,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_checkpoint_frequency', type=int, default=20000)
     parser.add_argument('--structure_loss', type=float, default=0.1)
     parser.add_argument('--structure_loss2', type=float, default=0.1)
-    parser.add_argument('--gradlock_iter', type=int, default=400000)
+    parser.add_argument('--gradlock_iter', type=int, default=20000)
 
     # dataset
     parser.add_argument('--batch', type=int, default=4)

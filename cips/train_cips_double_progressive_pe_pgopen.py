@@ -341,11 +341,14 @@ def train(args, loader, loader2, generator, discriminator, g_optim, d_optim, g_e
                 print(p1iter, "p1_fid",  cur_metrics['frechet_inception_distance'])
     ################################################## phase1 training
 
-    g_module.update_pe_mask(unmasking_ratio=args.unmasking_ratio2, device=device)
+    # g_module.update_pe_mask(unmasking_ratio=args.unmasking_ratio2, device=device)
+    g_module.progressive_open_alpha = 0
     g_ema.update_pe_mask(unmasking_ratio=args.unmasking_ratio2, device=device)
 
     for idx in pbar:
         i = idx + args.start_iter
+
+        g_module.progressive_open_pe_mask(unmasking_ratio=args.unmasking_ratio2, previous_unmasking_ratio=args.unmasking_ratio1, total_iteration=args.pgopen_iter, curent_iteration=i, device=device)
 
         if i > args.iter:
             print('Done!')
@@ -413,8 +416,6 @@ def train(args, loader, loader2, generator, discriminator, g_optim, d_optim, g_e
 
         generator.zero_grad()
         g_loss.backward()
-        if i < args.gradlock_iter:
-            g_module.lock_grad_pe_mask(unmasking_ratio=args.unmasking_ratio1, device=device)
         g_optim.step()
 
         loss_dict['path'] = path_loss
@@ -756,7 +757,7 @@ if __name__ == '__main__':
     parser.add_argument('--local_rank', type=int, default=0)
     parser.add_argument('--save_checkpoint_frequency', type=int, default=20000)
     parser.add_argument('--structure_loss', type=float, default=0.1)
-    parser.add_argument('--gradlock_iter', type=int, default=20000)
+    parser.add_argument('--pgopen_iter', type=int, default=2000)
 
     # dataset
     parser.add_argument('--batch', type=int, default=4)
