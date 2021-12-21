@@ -1,0 +1,90 @@
+2021.12.21
+nsml run -d lsun_church_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_large_coord_pred.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/32 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/128 --output_dir=experiment --distributed=0 --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --aux_loss=0.01 --aux_loss2=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLargeCoordinate --img2dis" \
+-m "cips_lsunchurch128_triple_progressive_str0.01str20.01aux0.01aux20.01" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_128/53
+
+nsml run -d lsun_church_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_large_coord_pred.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/32 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/128 --output_dir=experiment --distributed=0 --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --aux_loss=0.01 --aux_loss2=0.1 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLargeCoordinate --img2dis" \
+-m "cips_lsunchurch128_triple_progressive_str0.01str20.01aux0.01aux20.1" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_128/54
+
+nsml run -d lsun_church_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_large_coord_pred.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/32 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/128 --output_dir=experiment --distributed=0 --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --aux_loss=0.01 --aux_loss2=1 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLargeCoordinate --img2dis" \
+-m "cips_lsunchurch128_triple_progressive_str0.01str20.01aux0.01aux21" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_128/55
+
+nsml run -d lsun_church_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_large_coord_pred.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/32 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/128 --output_dir=experiment --distributed=0 --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --aux_loss=0.1 --aux_loss2=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLargeCoordinate --img2dis" \
+-m "cips_lsunchurch128_triple_progressive_str0.01str20.01aux0.1aux20.01" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_128/56
+
+nsml run -d lsun_church_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_large_coord_pred.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/32 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/128 --output_dir=experiment --distributed=0 --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --aux_loss=0.1 --aux_loss2=0.1 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLargeCoordinate --img2dis" \
+-m "cips_lsunchurch128_triple_progressive_str0.01str20.01aux0.1aux20.1" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_128/57
+
+nsml run -d lsun_church_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_large_coord_pred.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/32 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/128 --output_dir=experiment --distributed=0 --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --aux_loss=0.1 --aux_loss2=1 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLargeCoordinate --img2dis" \
+-m "cips_lsunchurch128_triple_progressive_str0.01str20.01aux0.1aux21" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_128/58
+
+nsml run -d lsun_church_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_large_coord_pred.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/32 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/128 --output_dir=experiment --distributed=0 --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --aux_loss=1 --aux_loss2=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLargeCoordinate --img2dis" \
+-m "cips_lsunchurch128_triple_progressive_str0.01str20.01aux1aux20.01" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_128/59
+
+nsml run -d lsun_church_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_large_coord_pred.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/32 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/128 --output_dir=experiment --distributed=0 --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --aux_loss=1 --aux_loss2=0.1 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLargeCoordinate --img2dis" \
+-m "cips_lsunchurch128_triple_progressive_str0.01str20.01aux1aux20.1" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_128/60
+
+nsml run -d lsun_church_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_large_coord_pred.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/32 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/128 --output_dir=experiment --distributed=0 --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 --aux_loss=1 --aux_loss2=1 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLargeCoordinate --img2dis" \
+-m "cips_lsunchurch128_triple_progressive_str0.01str20.01aux1aux21" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_128/61

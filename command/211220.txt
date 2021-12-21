@@ -178,3 +178,123 @@ nsml run -d ffhq_lmdb_256 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "tra
 --Discriminator=DiscriminatorLarge --img2dis" \
 -m "cips_ffhq256_triple_progressive_str100str2100" --gpu-driver-version "440"
 ailab002/ffhq_lmdb_256/62
+
+CUDA_VISIBLE_DEVICES=3 python test_cips.py \
+/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/128 --output_dir=experiment \
+--fid_samples=10000 --fid_batch=1 \
+--iter=1 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=1 --num_workers=16 --to_crop --crop=128 --coords_size=128 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--ckpt=/home/MS-INR-GAN/ailab002_lsun_church_lmdb_128_17/app/outputs/experiment/checkpoints/104000.pt
+
+CUDA_VISIBLE_DEVICES=3 python test_cips.py \
+/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/128 --output_dir=experiment \
+--fid_samples=10000 --fid_batch=1 \
+--iter=1 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=1 --num_workers=16 --to_crop --crop=128 --coords_size=128 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--ckpt=/home/MS-INR-GAN/ailab002_lsun_church_lmdb_128_18/app/outputs/experiment/checkpoints/118000.pt
+
+CUDA_VISIBLE_DEVICES=3 python test_cips.py \
+/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/128 --output_dir=experiment \
+--fid_samples=10000 --fid_batch=1 \
+--iter=1 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=1 --num_workers=16 --to_crop --crop=128 --coords_size=128 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--ckpt=/home/MS-INR-GAN/ailab002_lsun_church_lmdb_128_19/app/outputs/experiment/checkpoints/092000.pt
+
+CUDA_VISIBLE_DEVICES=3 python test_cips.py \
+/data_nfs/generation-nfs/namwoo/cips/ffhq_lmdb_256/256 --output_dir=experiment \
+--fid_samples=10000 --fid_batch=1 \
+--iter=1 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=1 --num_workers=16 --to_crop --crop=256 --coords_size=256 \
+--Generator=CIPSskippatch --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--ckpt=/home/MS-INR-GAN/ailab002_ffhq_lmdb_256_11/app/outputs/experiment/checkpoints/114000.pt
+
+CUDA_VISIBLE_DEVICES=3 python test_cips.py \
+/data_nfs/generation-nfs/namwoo/cips/ffhq_lmdb_256/256 --output_dir=experiment \
+--fid_samples=10000 --fid_batch=1 \
+--iter=1 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=1 --num_workers=16 --to_crop --crop=256 --coords_size=256 \
+--Generator=CIPSskippatch --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--ckpt=/home/MS-INR-GAN/ailab002_ffhq_lmdb_256_12/app/outputs/experiment/checkpoints/100000.pt
+
+CUDA_VISIBLE_DEVICES=3 python test_cips.py \
+/data_nfs/generation-nfs/namwoo/cips/ffhq_lmdb_256/256 --output_dir=experiment \
+--fid_samples=10000 --fid_batch=1 \
+--iter=1 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=1 --num_workers=16 --to_crop --crop=256 --coords_size=256 \
+--Generator=CIPSskippatch --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--ckpt=/home/MS-INR-GAN/ailab002_ffhq_lmdb_256_13/app/outputs/experiment/checkpoints/062000.pt
+
+nsml run -d lsun_church_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_large_partially_full.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/32 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--full_ratio=0.1 --DiscriminatorFull=Discriminator" \
+-m "cips_lsunchurch128_triple_progressive_str0.01str20.01full0.1" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_128/41
+
+nsml run -d lsun_church_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_large_partially_full.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/32 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--full_ratio=0.3 --DiscriminatorFull=Discriminator" \
+-m "cips_lsunchurch128_triple_progressive_str0.01str20.01full0.3" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_128/42
+
+nsml run -d lsun_church_lmdb_128 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_large_partially_full.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/32 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_128/128 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 \
+--batch=64 --num_workers=16 --to_crop --crop=128 --coords_size=128 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=128 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--full_ratio=0.5 --DiscriminatorFull=Discriminator" \
+-m "cips_lsunchurch128_triple_progressive_str0.01str20.01full0.5" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_128/43
+
+nsml run -d ffhq_lmdb_256 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_large_partially_full.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/ffhq_lmdb_256/64 /data_nfs/generation-nfs/namwoo/cips/ffhq_lmdb_256/128 /data_nfs/generation-nfs/namwoo/cips/ffhq_lmdb_256/256 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.1 --structure_loss2=0.1 \
+--batch=32 --num_workers=16 --to_crop --crop=256 --coords_size=256 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--full_ratio=0.1 --DiscriminatorFull=Discriminator" \
+-m "cips_ffhq256_triple_progressive_str0.1str20.1full0.1" --gpu-driver-version "440"
+ailab002/ffhq_lmdb_256/63
+
+nsml run -d ffhq_lmdb_256 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_large_partially_full.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/ffhq_lmdb_256/64 /data_nfs/generation-nfs/namwoo/cips/ffhq_lmdb_256/128 /data_nfs/generation-nfs/namwoo/cips/ffhq_lmdb_256/256 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.1 --structure_loss2=0.1 \
+--batch=32 --num_workers=16 --to_crop --crop=256 --coords_size=256 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--full_ratio=0.3 --DiscriminatorFull=Discriminator" \
+-m "cips_ffhq256_triple_progressive_str0.1str20.1full0.3" --gpu-driver-version "440"
+ailab002/ffhq_lmdb_256/64
+
+nsml run -d ffhq_lmdb_256 -g 1 --memory "32G" --shm-size "16GB" --cpus 8 -e "train_cips_triple_progressive_large_partially_full.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/ffhq_lmdb_256/64 /data_nfs/generation-nfs/namwoo/cips/ffhq_lmdb_256/128 /data_nfs/generation-nfs/namwoo/cips/ffhq_lmdb_256/256 --output_dir=experiment --distributed=False --world_size=1 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.1 --structure_loss2=0.1 \
+--batch=32 --num_workers=16 --to_crop --crop=256 --coords_size=256 --patch_multiplier=4 \
+--Generator=CIPSskippatch --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--full_ratio=0.5 --DiscriminatorFull=Discriminator" \
+-m "cips_ffhq256_triple_progressive_str0.1str20.1full0.5" --gpu-driver-version "440"
+ailab002/ffhq_lmdb_256/65

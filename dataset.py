@@ -4,6 +4,8 @@ __all__ = ['MultiScaleDataset',
            'MultiScaleScaleDataset',
            'MultiScalePatchScaleDataset',
            'MultiScalePatchProgressiveDataset',
+           'MultiScalePatchProgressivePairedDataset',
+           'MultiScalePatchProgressiveTripledDataset',
            'MultiScaleMipDataset',
            'MultiScalePatchMipDataset'
            ]
