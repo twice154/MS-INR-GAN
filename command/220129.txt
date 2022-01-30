@@ -1,0 +1,119 @@
+2022.01.29
+nsml run -d ffhq_lmdb_256 -g 4 --memory "128G" --shm-size "64GB" --cpus 32 -e "train_cips_ddp.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/ffhq_lmdb_256/256 --output_dir=experiment --distributed=True --world_size=4 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=8 --num_workers=16 --crop=256 --coords_size=256 \
+--Generator=CIPSskip --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_ffhq256_image_again" --gpu-driver-version "440"
+ailab002/ffhq_lmdb_256/116
+
+nsml run -d lsun_church_lmdb_256 -g 4 --memory "128G" --shm-size "64GB" --cpus 32 -e "train_cips_ddp.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/256 --output_dir=experiment --distributed=True --world_size=4 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=8 --num_workers=16 --crop=256 --coords_size=256 \
+--Generator=CIPSskip --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_lsunchurch256_image_again" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_256/40
+
+nsml run -d lsun_church_lmdb_256 -g 2 --memory "64G" --shm-size "32GB" --cpus 16 -e "train_cips_triple_progressive_simsiam_true.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/128 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/256 --output_dir=experiment --distributed=True --world_size=2 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.001 \
+--batch=16 --num_workers=16 --to_crop --crop=256 --coords_size=256 --patch_multiplier=4 \
+--Generator=CIPSskipemb --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--ContrastiveEncoder=ContrastiveEncoder --ContrastivePredictor=ContrastivePredictor" \
+-m "cips_lsunchurch256_triple_progressive_simsiam0.001simsiam20.001" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_256/41
+
+nsml run -d lsun_church_lmdb_256 -g 2 --memory "64G" --shm-size "32GB" --cpus 16 -e "train_cips_triple_progressive_simsiam_true.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/128 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/256 --output_dir=experiment --distributed=True --world_size=2 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.01 \
+--batch=16 --num_workers=16 --to_crop --crop=256 --coords_size=256 --patch_multiplier=4 \
+--Generator=CIPSskipemb --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--ContrastiveEncoder=ContrastiveEncoder --ContrastivePredictor=ContrastivePredictor" \
+-m "cips_lsunchurch256_triple_progressive_simsiam0.001simsiam20.01" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_256/42
+
+nsml run -d lsun_church_lmdb_256 -g 2 --memory "64G" --shm-size "32GB" --cpus 16 -e "train_cips_triple_progressive_simsiam_true.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/128 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/256 --output_dir=experiment --distributed=True --world_size=2 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.001 --structure_loss2=0.1 \
+--batch=16 --num_workers=16 --to_crop --crop=256 --coords_size=256 --patch_multiplier=4 \
+--Generator=CIPSskipemb --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--ContrastiveEncoder=ContrastiveEncoder --ContrastivePredictor=ContrastivePredictor" \
+-m "cips_lsunchurch256_triple_progressive_simsiam0.001simsiam20.1" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_256/43
+
+nsml run -d lsun_church_lmdb_256 -g 2 --memory "64G" --shm-size "32GB" --cpus 16 -e "train_cips_triple_progressive_simsiam_true.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/128 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/256 --output_dir=experiment --distributed=True --world_size=2 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.001 \
+--batch=16 --num_workers=16 --to_crop --crop=256 --coords_size=256 --patch_multiplier=4 \
+--Generator=CIPSskipemb --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--ContrastiveEncoder=ContrastiveEncoder --ContrastivePredictor=ContrastivePredictor" \
+-m "cips_lsunchurch256_triple_progressive_simsiam0.01simsiam20.001" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_256/44
+
+nsml run -d lsun_church_lmdb_256 -g 2 --memory "64G" --shm-size "32GB" --cpus 16 -e "train_cips_triple_progressive_simsiam_true.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/128 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/256 --output_dir=experiment --distributed=True --world_size=2 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.01 \
+--batch=16 --num_workers=16 --to_crop --crop=256 --coords_size=256 --patch_multiplier=4 \
+--Generator=CIPSskipemb --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--ContrastiveEncoder=ContrastiveEncoder --ContrastivePredictor=ContrastivePredictor" \
+-m "cips_lsunchurch256_triple_progressive_simsiam0.01simsiam20.01" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_256/45
+
+nsml run -d lsun_church_lmdb_256 -g 2 --memory "64G" --shm-size "32GB" --cpus 16 -e "train_cips_triple_progressive_simsiam_true.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/128 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/256 --output_dir=experiment --distributed=True --world_size=2 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.01 --structure_loss2=0.1 \
+--batch=16 --num_workers=16 --to_crop --crop=256 --coords_size=256 --patch_multiplier=4 \
+--Generator=CIPSskipemb --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--ContrastiveEncoder=ContrastiveEncoder --ContrastivePredictor=ContrastivePredictor" \
+-m "cips_lsunchurch256_triple_progressive_simsiam0.01simsiam20.1" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_256/46
+
+nsml run -d lsun_church_lmdb_256 -g 2 --memory "64G" --shm-size "32GB" --cpus 16 -e "train_cips_triple_progressive_simsiam_true.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/128 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/256 --output_dir=experiment --distributed=True --world_size=2 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.1 --structure_loss2=0.001 \
+--batch=16 --num_workers=16 --to_crop --crop=256 --coords_size=256 --patch_multiplier=4 \
+--Generator=CIPSskipemb --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--ContrastiveEncoder=ContrastiveEncoder --ContrastivePredictor=ContrastivePredictor" \
+-m "cips_lsunchurch256_triple_progressive_simsiam0.1simsiam20.001" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_256/47
+
+nsml run -d lsun_church_lmdb_256 -g 2 --memory "64G" --shm-size "32GB" --cpus 16 -e "train_cips_triple_progressive_simsiam_true.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/128 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/256 --output_dir=experiment --distributed=True --world_size=2 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.1 --structure_loss2=0.01 \
+--batch=16 --num_workers=16 --to_crop --crop=256 --coords_size=256 --patch_multiplier=4 \
+--Generator=CIPSskipemb --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--ContrastiveEncoder=ContrastiveEncoder --ContrastivePredictor=ContrastivePredictor" \
+-m "cips_lsunchurch256_triple_progressive_simsiam0.1simsiam20.01" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_256/48
+
+nsml run -d lsun_church_lmdb_256 -g 2 --memory "64G" --shm-size "32GB" --cpus 16 -e "train_cips_triple_progressive_simsiam_true.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/64 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/128 /data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/256 --output_dir=experiment --distributed=True --world_size=2 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 --structure_loss=0.1 --structure_loss2=0.1 \
+--batch=16 --num_workers=16 --to_crop --crop=256 --coords_size=256 --patch_multiplier=4 \
+--Generator=CIPSskipemb --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--Discriminator=DiscriminatorLarge --img2dis \
+--ContrastiveEncoder=ContrastiveEncoder --ContrastivePredictor=ContrastivePredictor" \
+-m "cips_lsunchurch256_triple_progressive_simsiam0.1simsiam20.1" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_256/49

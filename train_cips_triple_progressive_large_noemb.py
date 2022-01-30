@@ -15,16 +15,13 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 import model
-from dataset import MultiScaleDataset, ImageDataset, MultiScalePatchDataset, MultiScalePatchProgressiveDataset, MultiScalePatchProgressivePairedDataset
+from dataset_noemb import MultiScaleDataset, ImageDataset, MultiScalePatchDataset, MultiScalePatchProgressiveDataset, MultiScalePatchProgressivePairedDataset
 from calculate_fid import calculate_fid, calculate_fid_ddp
 from distributed import get_rank, synchronize, reduce_loss_dict
 from tensor_transforms import convert_to_coord_format
 
 from torchvision.transforms import functional as trans_fn
 import time
-
-from PIL import Image, ImageFile
-ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 try:
     import nsml
@@ -161,8 +158,6 @@ def train(args, loader, loader2, loader3, generator, discriminator, g_optim, d_o
     pure_training_iteration_time = 0
 
     ################################################## phase1 training
-    g_module.re_init_phase(1)
-    g_ema_temp.re_init_phase(1)
     for p1iter in range(args.iter):
         print("phase 1, iteration", p1iter)
 
@@ -259,119 +254,112 @@ def train(args, loader, loader2, loader3, generator, discriminator, g_optim, d_o
         imagep1_real_score_val = loss_reduced['p1image_real_score'].mean().item()
         imagep1_fake_score_val = loss_reduced['p1image_fake_score'].mean().item()
 
-        if get_rank() == 0:
-            if p1iter % 100 == 0:
-                if nsml:
-                    nsml.report(summary=True, step=p1iter,
-                    # Generator=g_loss_val,
-                    # G_main=g_loss_main_val,
-                    # G_aux=g_loss_aux_val,
-                    # Discriminator=d_loss_val,
-                    # D_main=d_loss_main_val,
-                    # D_aux=d_loss_aux_val,
-                    # R1=r1_val,
-                    # PathLengthRegularization=path_loss_val,
-                    # MeanPathLength=mean_path_length,
-                    # RealScore=real_score_val,
-                    # FakeScore=fake_score_val,
-                    # PathLength=path_length_val,
-                    # Patch1x_Generator=patch1x_g_loss_val,
-                    # Patch1x_G_main=patch1x_g_loss_main_val,
-                    # Patch1x_G_aux=patch1x_g_loss_aux_val,
-                    # Patch1x_Discriminator=patch1x_d_loss_val,
-                    # Patch1x_D_main=patch1x_d_loss_main_val,
-                    # Patch1x_D_aux=patch1x_d_loss_aux_val,
-                    # Patch1x_R1=patch1x_r1_val,
-                    # Patch1x_RealScore=patch1x_real_score_val,
-                    # Patch1x_FakeScore=patch1x_fake_score_val,
-                    P1_Generator=imagep1_g_loss_val,
-                    P1_G_main=imagep1_g_loss_main_val,
-                    P1_Discriminator=imagep1_d_loss_val,
-                    P1_D_main=imagep1_d_loss_main_val,
-                    P1_R1=imagep1_r1_val,
-                    P1_RealScore=imagep1_real_score_val,
-                    P1_FakeScore=imagep1_fake_score_val,
-                    P1_Time=p1_pure_training_iteration_time)
-                # else:
-                    # writer.add_scalar("Generator", g_loss_val, i)
-                    # writer.add_scalar("Discriminator", d_loss_val, i)
-                    # writer.add_scalar("R1", r1_val, i)
-                    # writer.add_scalar("Path Length Regularization", path_loss_val, i)
-                    # writer.add_scalar("Mean Path Length", mean_path_length, i)
-                    # writer.add_scalar("Real Score", real_score_val, i)
-                    # writer.add_scalar("Fake Score", fake_score_val, i)
-                    # writer.add_scalar("Path Length", path_length_val, i)
-            if p1iter % 500 == 0:
-                with torch.no_grad():
-                    g_ema_temp.eval()
-                    converted_full = convert_to_coord_format(sample_z.size(0), int(args.size/4), int(args.size/4), device,
+        if p1iter % 100 == 0:
+            if nsml:
+                nsml.report(summary=True, step=p1iter,
+                # Generator=g_loss_val,
+                # G_main=g_loss_main_val,
+                # G_aux=g_loss_aux_val,
+                # Discriminator=d_loss_val,
+                # D_main=d_loss_main_val,
+                # D_aux=d_loss_aux_val,
+                # R1=r1_val,
+                # PathLengthRegularization=path_loss_val,
+                # MeanPathLength=mean_path_length,
+                # RealScore=real_score_val,
+                # FakeScore=fake_score_val,
+                # PathLength=path_length_val,
+                # Patch1x_Generator=patch1x_g_loss_val,
+                # Patch1x_G_main=patch1x_g_loss_main_val,
+                # Patch1x_G_aux=patch1x_g_loss_aux_val,
+                # Patch1x_Discriminator=patch1x_d_loss_val,
+                # Patch1x_D_main=patch1x_d_loss_main_val,
+                # Patch1x_D_aux=patch1x_d_loss_aux_val,
+                # Patch1x_R1=patch1x_r1_val,
+                # Patch1x_RealScore=patch1x_real_score_val,
+                # Patch1x_FakeScore=patch1x_fake_score_val,
+                P1_Generator=imagep1_g_loss_val,
+                P1_G_main=imagep1_g_loss_main_val,
+                P1_Discriminator=imagep1_d_loss_val,
+                P1_D_main=imagep1_d_loss_main_val,
+                P1_R1=imagep1_r1_val,
+                P1_RealScore=imagep1_real_score_val,
+                P1_FakeScore=imagep1_fake_score_val,
+                P1_Time=p1_pure_training_iteration_time)
+            # else:
+                # writer.add_scalar("Generator", g_loss_val, i)
+                # writer.add_scalar("Discriminator", d_loss_val, i)
+                # writer.add_scalar("R1", r1_val, i)
+                # writer.add_scalar("Path Length Regularization", path_loss_val, i)
+                # writer.add_scalar("Mean Path Length", mean_path_length, i)
+                # writer.add_scalar("Real Score", real_score_val, i)
+                # writer.add_scalar("Fake Score", fake_score_val, i)
+                # writer.add_scalar("Path Length", path_length_val, i)
+        if p1iter % 500 == 0:
+            with torch.no_grad():
+                g_ema_temp.eval()
+                converted_full = convert_to_coord_format(sample_z.size(0), int(args.size/4), int(args.size/4), device,
+                                                            integer_values=args.coords_integer_values)
+                if args.generate_by_one:
+                    converted_full = convert_to_coord_format(1, int(args.size/4), int(args.size/4), device,
                                                                 integer_values=args.coords_integer_values)
-                    if args.generate_by_one:
-                        converted_full = convert_to_coord_format(1, int(args.size/4), int(args.size/4), device,
-                                                                    integer_values=args.coords_integer_values)
-                        samples = []
-                        for sz in sample_z:
-                            sample, _ = g_ema_temp(converted_full, [sz.unsqueeze(0)])
-                            samples.append(sample)
-                        sample = torch.cat(samples, 0)
-                    else:
-                        sample, _ = g_ema_temp(converted_full, [sample_z])
+                    samples = []
+                    for sz in sample_z:
+                        sample, _ = g_ema_temp(converted_full, [sz.unsqueeze(0)])
+                        samples.append(sample)
+                    sample = torch.cat(samples, 0)
+                else:
+                    sample, _ = g_ema_temp(converted_full, [sample_z])
 
+                utils.save_image(
+                    sample,
+                    os.path.join(path, 'outputs', args.output_dir, 'p1_images', f'{str(p1iter).zfill(6)}.png'),
+                    nrow=int(args.n_sample ** 0.5),
+                    normalize=True,
+                    range=(-1, 1),
+                )
+
+                if p1iter == 0:
                     utils.save_image(
-                        sample,
-                        os.path.join(path, 'outputs', args.output_dir, 'p1_images', f'{str(p1iter).zfill(6)}.png'),
-                        nrow=int(args.n_sample ** 0.5),
+                        fake_img,
+                        os.path.join(
+                            path,
+                            f'outputs/{args.output_dir}/p1_images/fake_patch_{str(key)}_{str(p1iter).zfill(6)}.png'),
+                        nrow=int(fake_img.size(0) ** 0.5),
                         normalize=True,
                         range=(-1, 1),
                     )
 
-                    if p1iter == 0:
-                        utils.save_image(
-                            fake_img,
-                            os.path.join(
-                                path,
-                                f'outputs/{args.output_dir}/p1_images/fake_patch_{str(key)}_{str(p1iter).zfill(6)}.png'),
-                            nrow=int(fake_img.size(0) ** 0.5),
-                            normalize=True,
-                            range=(-1, 1),
-                        )
-
-                        utils.save_image(
-                            real_img,
-                            os.path.join(
-                                path,
-                                f'outputs/{args.output_dir}/p1_images/real_patch_{str(key)}_{str(p1iter).zfill(6)}.png'),
-                            nrow=int(real_img.size(0) ** 0.5),
-                            normalize=True,
-                            range=(-1, 1),
-                        )
-            if p1iter % args.save_checkpoint_frequency == 0:
-                if p1iter > 0:
-                    cur_metrics = calculate_fid_ddp(g_ema_temp, fid_dataset=fid_dataset, bs=args.fid_batch, size=int(args.coords_size/args.patch_multiplier),
-                                                num_batches=args.fid_samples//args.fid_batch, latent_size=args.latent,
-                                                save_dir=args.path_fid, integer_values=args.coords_integer_values)
-                    if nsml:
-                        nsml.report(summary=True, step=p1iter, p1_fid=cur_metrics['frechet_inception_distance'])
-                    else:
-                        writer.add_scalar("p1_fid", cur_metrics['frechet_inception_distance'], p1iter)
-                    print(p1iter, "p1_fid",  cur_metrics['frechet_inception_distance'])
+                    utils.save_image(
+                        real_img,
+                        os.path.join(
+                            path,
+                            f'outputs/{args.output_dir}/p1_images/real_patch_{str(key)}_{str(p1iter).zfill(6)}.png'),
+                        nrow=int(real_img.size(0) ** 0.5),
+                        normalize=True,
+                        range=(-1, 1),
+                    )
+        if p1iter % args.save_checkpoint_frequency == 0:
+            if p1iter > 0:
+                cur_metrics = calculate_fid_ddp(g_ema_temp, fid_dataset=fid_dataset, bs=args.fid_batch, size=int(args.coords_size/args.patch_multiplier),
+                                            num_batches=args.fid_samples//args.fid_batch, latent_size=args.latent,
+                                            save_dir=args.path_fid, integer_values=args.coords_integer_values)
+                if nsml:
+                    nsml.report(summary=True, step=p1iter, p1_fid=cur_metrics['frechet_inception_distance'])
+                else:
+                    writer.add_scalar("p1_fid", cur_metrics['frechet_inception_distance'], p1iter)
+                print(p1iter, "p1_fid",  cur_metrics['frechet_inception_distance'])
     ################################################## phase1 training
 
     ################################################## phase2 training
-    g_module.re_init_phase(2)
-    g_ema_temp2.re_init_phase(2)
     for p2iter in range(args.iter):
         print("phase 2, iteration", p2iter)
 
         start = time.time()
 
-        data, grid_h, grid_w, grid_h_bpg, grid_w_bpg, fake_crop_params, structure_crop_params = next(loader2)
+        data, coord_h, coord_w, fake_crop_params, structure_crop_params = next(loader2)
         key = np.random.randint(n_scales)
         real_stack = data[key].to(device)
-        grid_h = grid_h.to(device)
-        grid_w = grid_w.to(device)
-        grid_h_bpg = grid_h_bpg.to(device)
-        grid_w_bpg = grid_w_bpg.to(device)
 
         real_img, converted, structured = real_stack[:, :3], real_stack[:, 3:5], real_stack[:, 5:7]
 
@@ -380,7 +368,7 @@ def train(args, loader, loader2, loader3, generator, discriminator, g_optim, d_o
 
         noise = mixing_noise(args.batch, args.latent, args.mixing, device)
 
-        fake_img, _ = generator(converted, noise, grid_h, grid_w)
+        fake_img, _ = generator(converted, noise)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
         fake_pred = discriminator(fake, key)
 
@@ -428,10 +416,10 @@ def train(args, loader, loader2, loader3, generator, discriminator, g_optim, d_o
 
         noise = mixing_noise(args.batch, args.latent, args.mixing, device)
 
-        fake_img, _ = generator(converted, noise, grid_h, grid_w)
+        fake_img, _ = generator(converted, noise)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
         g_ema_temp.eval()
-        structure_img, _ = g_ema_temp(structured, noise, grid_h_bpg, grid_w_bpg)
+        structure_img, _ = g_ema_temp(structured, noise)
         fake_pred = discriminator(fake, key)
         g_loss_structure = args.structure_loss*g_structure_l2_loss(fake_img, structure_img, fake_crop_params, structure_crop_params)
         g_loss_main = g_nonsaturating_loss(fake_pred)
@@ -466,106 +454,104 @@ def train(args, loader, loader2, loader3, generator, discriminator, g_optim, d_o
         imagep2_real_score_val = loss_reduced['p2image_real_score'].mean().item()
         imagep2_fake_score_val = loss_reduced['p2image_fake_score'].mean().item()
 
-        if get_rank() == 0:
-            if p2iter % 100 == 0:
-                if nsml:
-                    nsml.report(summary=True, step=p2iter,
-                    # Generator=g_loss_val,
-                    # G_main=g_loss_main_val,
-                    # G_aux=g_loss_aux_val,
-                    # Discriminator=d_loss_val,
-                    # D_main=d_loss_main_val,
-                    # D_aux=d_loss_aux_val,
-                    # R1=r1_val,
-                    # PathLengthRegularization=path_loss_val,
-                    # MeanPathLength=mean_path_length,
-                    # RealScore=real_score_val,
-                    # FakeScore=fake_score_val,
-                    # PathLength=path_length_val,
-                    # Patch1x_Generator=patch1x_g_loss_val,
-                    # Patch1x_G_main=patch1x_g_loss_main_val,
-                    # Patch1x_G_aux=patch1x_g_loss_aux_val,
-                    # Patch1x_Discriminator=patch1x_d_loss_val,
-                    # Patch1x_D_main=patch1x_d_loss_main_val,
-                    # Patch1x_D_aux=patch1x_d_loss_aux_val,
-                    # Patch1x_R1=patch1x_r1_val,
-                    # Patch1x_RealScore=patch1x_real_score_val,
-                    # Patch1x_FakeScore=patch1x_fake_score_val,
-                    P2_Generator=imagep2_g_loss_val,
-                    P2_G_main=imagep2_g_loss_main_val,
-                    P2_G_structure=imagep2_g_loss_structure_val,
-                    P2_Discriminator=imagep2_d_loss_val,
-                    P2_D_main=imagep2_d_loss_main_val,
-                    P2_R1=imagep2_r1_val,
-                    P2_RealScore=imagep2_real_score_val,
-                    P2_FakeScore=imagep2_fake_score_val,
-                    P2_Time=p2_pure_training_iteration_time)
-                # else:
-                    # writer.add_scalar("Generator", g_loss_val, i)
-                    # writer.add_scalar("Discriminator", d_loss_val, i)
-                    # writer.add_scalar("R1", r1_val, i)
-                    # writer.add_scalar("Path Length Regularization", path_loss_val, i)
-                    # writer.add_scalar("Mean Path Length", mean_path_length, i)
-                    # writer.add_scalar("Real Score", real_score_val, i)
-                    # writer.add_scalar("Fake Score", fake_score_val, i)
-                    # writer.add_scalar("Path Length", path_length_val, i)
-            if p2iter % 500 == 0:
-                with torch.no_grad():
-                    g_ema_temp2.eval()
-                    converted_full = convert_to_coord_format(sample_z.size(0), int(args.size/2), int(args.size/2), device,
+        if p2iter % 100 == 0:
+            if nsml:
+                nsml.report(summary=True, step=p2iter,
+                # Generator=g_loss_val,
+                # G_main=g_loss_main_val,
+                # G_aux=g_loss_aux_val,
+                # Discriminator=d_loss_val,
+                # D_main=d_loss_main_val,
+                # D_aux=d_loss_aux_val,
+                # R1=r1_val,
+                # PathLengthRegularization=path_loss_val,
+                # MeanPathLength=mean_path_length,
+                # RealScore=real_score_val,
+                # FakeScore=fake_score_val,
+                # PathLength=path_length_val,
+                # Patch1x_Generator=patch1x_g_loss_val,
+                # Patch1x_G_main=patch1x_g_loss_main_val,
+                # Patch1x_G_aux=patch1x_g_loss_aux_val,
+                # Patch1x_Discriminator=patch1x_d_loss_val,
+                # Patch1x_D_main=patch1x_d_loss_main_val,
+                # Patch1x_D_aux=patch1x_d_loss_aux_val,
+                # Patch1x_R1=patch1x_r1_val,
+                # Patch1x_RealScore=patch1x_real_score_val,
+                # Patch1x_FakeScore=patch1x_fake_score_val,
+                P2_Generator=imagep2_g_loss_val,
+                P2_G_main=imagep2_g_loss_main_val,
+                P2_G_structure=imagep2_g_loss_structure_val,
+                P2_Discriminator=imagep2_d_loss_val,
+                P2_D_main=imagep2_d_loss_main_val,
+                P2_R1=imagep2_r1_val,
+                P2_RealScore=imagep2_real_score_val,
+                P2_FakeScore=imagep2_fake_score_val,
+                P2_Time=p2_pure_training_iteration_time)
+            # else:
+                # writer.add_scalar("Generator", g_loss_val, i)
+                # writer.add_scalar("Discriminator", d_loss_val, i)
+                # writer.add_scalar("R1", r1_val, i)
+                # writer.add_scalar("Path Length Regularization", path_loss_val, i)
+                # writer.add_scalar("Mean Path Length", mean_path_length, i)
+                # writer.add_scalar("Real Score", real_score_val, i)
+                # writer.add_scalar("Fake Score", fake_score_val, i)
+                # writer.add_scalar("Path Length", path_length_val, i)
+        if p2iter % 500 == 0:
+            with torch.no_grad():
+                g_ema_temp2.eval()
+                converted_full = convert_to_coord_format(sample_z.size(0), int(args.size/2), int(args.size/2), device,
+                                                            integer_values=args.coords_integer_values)
+                if args.generate_by_one:
+                    converted_full = convert_to_coord_format(1, int(args.size/2), int(args.size/2), device,
                                                                 integer_values=args.coords_integer_values)
-                    if args.generate_by_one:
-                        converted_full = convert_to_coord_format(1, int(args.size/2), int(args.size/2), device,
-                                                                    integer_values=args.coords_integer_values)
-                        samples = []
-                        for sz in sample_z:
-                            sample, _ = g_ema_temp2(converted_full, [sz.unsqueeze(0)])
-                            samples.append(sample)
-                        sample = torch.cat(samples, 0)
-                    else:
-                        sample, _ = g_ema_temp2(converted_full, [sample_z])
+                    samples = []
+                    for sz in sample_z:
+                        sample, _ = g_ema_temp2(converted_full, [sz.unsqueeze(0)])
+                        samples.append(sample)
+                    sample = torch.cat(samples, 0)
+                else:
+                    sample, _ = g_ema_temp2(converted_full, [sample_z])
 
+                utils.save_image(
+                    sample,
+                    os.path.join(path, 'outputs', args.output_dir, 'p2_images', f'{str(p2iter).zfill(6)}.png'),
+                    nrow=int(args.n_sample ** 0.5),
+                    normalize=True,
+                    range=(-1, 1),
+                )
+
+                if p2iter == 0:
                     utils.save_image(
-                        sample,
-                        os.path.join(path, 'outputs', args.output_dir, 'p2_images', f'{str(p2iter).zfill(6)}.png'),
-                        nrow=int(args.n_sample ** 0.5),
+                        fake_img,
+                        os.path.join(
+                            path,
+                            f'outputs/{args.output_dir}/p2_images/fake_patch_{str(key)}_{str(p2iter).zfill(6)}.png'),
+                        nrow=int(fake_img.size(0) ** 0.5),
                         normalize=True,
                         range=(-1, 1),
                     )
 
-                    if p2iter == 0:
-                        utils.save_image(
-                            fake_img,
-                            os.path.join(
-                                path,
-                                f'outputs/{args.output_dir}/p2_images/fake_patch_{str(key)}_{str(p2iter).zfill(6)}.png'),
-                            nrow=int(fake_img.size(0) ** 0.5),
-                            normalize=True,
-                            range=(-1, 1),
-                        )
-
-                        utils.save_image(
-                            real_img,
-                            os.path.join(
-                                path,
-                                f'outputs/{args.output_dir}/p2_images/real_patch_{str(key)}_{str(p2iter).zfill(6)}.png'),
-                            nrow=int(real_img.size(0) ** 0.5),
-                            normalize=True,
-                            range=(-1, 1),
-                        )
-            if p2iter % args.save_checkpoint_frequency == 0:
-                if p2iter > 0:
-                    cur_metrics = calculate_fid_ddp(g_ema_temp2, fid_dataset=fid_dataset2, bs=args.fid_batch, size=int(args.coords_size/args.patch_multiplier)*2,
-                                                num_batches=args.fid_samples//args.fid_batch, latent_size=args.latent,
-                                                save_dir=args.path_fid, integer_values=args.coords_integer_values)
-                    if nsml:
-                        nsml.report(summary=True, step=p2iter, p2_fid=cur_metrics['frechet_inception_distance'])
-                    else:
-                        writer.add_scalar("p2_fid", cur_metrics['frechet_inception_distance'], p2iter)
-                    print(p2iter, "p2_fid",  cur_metrics['frechet_inception_distance'])
+                    utils.save_image(
+                        real_img,
+                        os.path.join(
+                            path,
+                            f'outputs/{args.output_dir}/p2_images/real_patch_{str(key)}_{str(p2iter).zfill(6)}.png'),
+                        nrow=int(real_img.size(0) ** 0.5),
+                        normalize=True,
+                        range=(-1, 1),
+                    )
+        if p2iter % args.save_checkpoint_frequency == 0:
+            if p2iter > 0:
+                cur_metrics = calculate_fid_ddp(g_ema_temp2, fid_dataset=fid_dataset2, bs=args.fid_batch, size=int(args.coords_size/args.patch_multiplier)*2,
+                                            num_batches=args.fid_samples//args.fid_batch, latent_size=args.latent,
+                                            save_dir=args.path_fid, integer_values=args.coords_integer_values)
+                if nsml:
+                    nsml.report(summary=True, step=p2iter, p2_fid=cur_metrics['frechet_inception_distance'])
+                else:
+                    writer.add_scalar("p2_fid", cur_metrics['frechet_inception_distance'], p2iter)
+                print(p2iter, "p2_fid",  cur_metrics['frechet_inception_distance'])
     ################################################## phase2 training
-    g_module.re_init_phase(3)
-    g_ema.re_init_phase(3)
+
     for idx in pbar:
         i = idx + args.start_iter
 
@@ -576,13 +562,9 @@ def train(args, loader, loader2, loader3, generator, discriminator, g_optim, d_o
 
         start = time.time()
 
-        data, grid_h, grid_w, grid_h_bpg, grid_w_bpg, fake_crop_params, structure_crop_params = next(loader3)
+        data, coord_h, coord_w, fake_crop_params, structure_crop_params = next(loader3)
         key = np.random.randint(n_scales)
         real_stack = data[key].to(device)
-        grid_h = grid_h.to(device)
-        grid_w = grid_w.to(device)
-        grid_h_bpg = grid_h_bpg.to(device)
-        grid_w_bpg = grid_w_bpg.to(device)
 
         real_img, converted, structured = real_stack[:, :3], real_stack[:, 3:5], real_stack[:, 5:7]
 
@@ -591,7 +573,7 @@ def train(args, loader, loader2, loader3, generator, discriminator, g_optim, d_o
 
         noise = mixing_noise(args.batch, args.latent, args.mixing, device)
 
-        fake_img, _ = generator(converted, noise, grid_h, grid_w)
+        fake_img, _ = generator(converted, noise)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
         fake_pred = discriminator(fake, key)
 
@@ -626,10 +608,10 @@ def train(args, loader, loader2, loader3, generator, discriminator, g_optim, d_o
 
         noise = mixing_noise(args.batch, args.latent, args.mixing, device)
 
-        fake_img, _ = generator(converted, noise, grid_h, grid_w)
+        fake_img, _ = generator(converted, noise)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
         g_ema_temp2.eval()
-        structure_img, _ = g_ema_temp2(structured, noise, grid_h_bpg, grid_w_bpg)
+        structure_img, _ = g_ema_temp2(structured, noise)
         fake_pred = discriminator(fake, key)
         g_loss_structure = args.structure_loss2*g_structure_l2_loss(fake_img, structure_img, fake_crop_params, structure_crop_params)
         g_loss_main = g_nonsaturating_loss(fake_pred)
@@ -879,7 +861,6 @@ def ddp_worker(rank, world_size, args):
             device_ids=[rank],
             output_device=rank,
             broadcast_buffers=False,
-            find_unused_parameters=True,
         )
 
         discriminator = nn.parallel.DistributedDataParallel(
@@ -887,7 +868,6 @@ def ddp_worker(rank, world_size, args):
             device_ids=[rank],
             output_device=rank,
             broadcast_buffers=False,
-            find_unused_parameters=True,
         )
 
     g_optim = optim.Adam(

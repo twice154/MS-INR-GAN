@@ -1,0 +1,20 @@
+2022.01.23
+nsml run -d ffhq_lmdb_256 -g 4 --memory "128G" --shm-size "64GB" --cpus 32 -e "train_cips_ddp.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/ffhq_lmdb_256/256 --output_dir=experiment --distributed=True --world_size=4 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=8 --num_workers=16 --crop=256 --coords_size=256 \
+--Generator=CIPSskip --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_ffhq256_image" --gpu-driver-version "440"
+ailab002/ffhq_lmdb_256/66
+
+nsml run -d lsun_church_lmdb_256 -g 4 --memory "128G" --shm-size "64GB" --cpus 32 -e "train_cips_ddp.py" \
+-a "/data_nfs/generation-nfs/namwoo/cips/lsun_church_lmdb_256/256 --output_dir=experiment --distributed=True --world_size=4 \
+--fid_samples=10000 --fid_batch=16 \
+--iter=120000 --n_sample=8 --lr=0.002 --save_checkpoint_frequency=2000 \
+--batch=8 --num_workers=16 --crop=256 --coords_size=256 \
+--Generator=CIPSskip --size=256 --fc_dim=512 --latent=512 --n_mlp=8 \
+--img2dis" \
+-m "cips_lsunchurch256_image" --gpu-driver-version "440"
+ailab002/lsun_church_lmdb_256/1

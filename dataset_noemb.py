@@ -197,7 +197,7 @@ class MultiScalePatchDataset(Dataset):
         del stack
         del stack_strided
 
-        return data, torch.tensor(h_start), torch.tensor(w_start)  # torch.tensor((h_start/(h/2))-1), torch.tensor((w_start/(w/2))-1)
+        return data, torch.tensor((h_start/(h/2))-1), torch.tensor((w_start/(w/2))-1)
 
 
 class MultiScaleScaleDataset(Dataset):
@@ -486,7 +486,7 @@ class MultiScalePatchProgressivePairedDataset(Dataset):
         del stack
         del stack_strided
 
-        return data, torch.tensor(h_start), torch.tensor(w_start), torch.tensor(h_start_bpg), torch.tensor(w_start_bpg), (h, w, h_start, w_start, size), (h_bpg, w_bpg, h_start_bpg, w_start_bpg, size_bpg)
+        return data, torch.tensor((h_start/(h/2))-1), torch.tensor((w_start/(w/2))-1), (h, w, h_start, w_start, size), (h_bpg, w_bpg, h_start_bpg, w_start_bpg, size_bpg)
 
 
 class MultiScaleMipDataset(Dataset):

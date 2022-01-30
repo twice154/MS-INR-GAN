@@ -109,6 +109,19 @@ def g_structure_l2_loss(fake_img, structure_img, fake_crop_params, structure_cro
     return loss / fake_img.shape[0]
 
 
+def make_duald_input(fake_img, structure_img, fake_crop_params, structure_crop_params, device):
+    u_structure = torch.zeros(fake_img.shape[0], fake_img.shape[1], int(fake_img.shape[2]/2), int(fake_img.shape[3]/2)).to(device)
+
+    for i in range(fake_img.shape[0]):
+        magnification = fake_crop_params[0][i] / structure_crop_params[0][i]
+        downsampled_fake_img = trans_fn.resize(fake_img[i], int(fake_img[i].shape[2]/magnification))
+        cropped_structure_img = structure_img[i, :, int(fake_crop_params[2][i]/magnification - structure_crop_params[2][i]) : int(fake_crop_params[2][i]/magnification - structure_crop_params[2][i]) + downsampled_fake_img.shape[2], int(fake_crop_params[3][i]/magnification - structure_crop_params[3][i]) : int(fake_crop_params[3][i]/magnification - structure_crop_params[3][i]) + downsampled_fake_img.shape[2]]
+        u_structure[i] = cropped_structure_img
+    u_structure = F.interpolate(u_structure, scale_factor=2.0)
+
+    return torch.cat([u_structure, fake_img], 1)
+
+
 def make_noise(batch, latent_dim, n_noise, device):
     if n_noise == 1:
         return torch.randn(batch, latent_dim, device=device)
@@ -181,9 +194,15 @@ def train(args, loader, loader2, loader3, generator, discriminator, g_optim, d_o
 
         fake_img, _ = generator(converted, noise)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
+        d_fake = F.interpolate(fake, scale_factor=0.5)
+        u_d_fake = F.interpolate(d_fake, scale_factor=2.0)
+        fake = torch.cat([u_d_fake, fake], 1)
         fake_pred = discriminator(fake, key)
 
         real = real_img if args.img2dis else real_stack
+        d_real = F.interpolate(real, scale_factor=0.5)
+        u_d_real = F.interpolate(d_real, scale_factor=2.0)
+        real = torch.cat([u_d_real, real], 1)
         real_pred = discriminator(real, key)
         d_loss = d_logistic_loss(real_pred, fake_pred)
 
@@ -229,6 +248,9 @@ def train(args, loader, loader2, loader3, generator, discriminator, g_optim, d_o
 
         fake_img, _ = generator(converted, noise)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
+        d_fake = F.interpolate(fake, scale_factor=0.5)
+        u_d_fake = F.interpolate(d_fake, scale_factor=2.0)
+        fake = torch.cat([u_d_fake, fake], 1)
         fake_pred = discriminator(fake, key)
         g_loss = g_nonsaturating_loss(fake_pred)
 
@@ -382,9 +404,15 @@ def train(args, loader, loader2, loader3, generator, discriminator, g_optim, d_o
 
         fake_img, _ = generator(converted, noise, grid_h, grid_w)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
+        g_ema_temp.eval()
+        structure_img, _ = g_ema_temp(structured, noise, grid_h_bpg, grid_w_bpg)
+        fake = make_duald_input(fake_img, structure_img, fake_crop_params, structure_crop_params, device)
         fake_pred = discriminator(fake, key)
 
         real = real_img if args.img2dis else real_stack
+        d_real = F.interpolate(real, scale_factor=0.5)
+        u_d_real = F.interpolate(d_real, scale_factor=2.0)
+        real = torch.cat([u_d_real, real], 1)
         real_pred = discriminator(real, key)
         d_loss = d_logistic_loss(real_pred, fake_pred)
 
@@ -432,6 +460,7 @@ def train(args, loader, loader2, loader3, generator, discriminator, g_optim, d_o
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
         g_ema_temp.eval()
         structure_img, _ = g_ema_temp(structured, noise, grid_h_bpg, grid_w_bpg)
+        fake = make_duald_input(fake_img, structure_img, fake_crop_params, structure_crop_params, device)
         fake_pred = discriminator(fake, key)
         g_loss_structure = args.structure_loss*g_structure_l2_loss(fake_img, structure_img, fake_crop_params, structure_crop_params)
         g_loss_main = g_nonsaturating_loss(fake_pred)
@@ -593,9 +622,15 @@ def train(args, loader, loader2, loader3, generator, discriminator, g_optim, d_o
 
         fake_img, _ = generator(converted, noise, grid_h, grid_w)
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
+        g_ema_temp2.eval()
+        structure_img, _ = g_ema_temp2(structured, noise, grid_h_bpg, grid_w_bpg)
+        fake = make_duald_input(fake_img, structure_img, fake_crop_params, structure_crop_params, device)
         fake_pred = discriminator(fake, key)
 
         real = real_img if args.img2dis else real_stack
+        d_real = F.interpolate(real, scale_factor=0.5)
+        u_d_real = F.interpolate(d_real, scale_factor=2.0)
+        real = torch.cat([u_d_real, real], 1)
         real_pred = discriminator(real, key)
         d_loss = d_logistic_loss(real_pred, fake_pred)
 
@@ -630,6 +665,7 @@ def train(args, loader, loader2, loader3, generator, discriminator, g_optim, d_o
         fake = fake_img if args.img2dis else torch.cat([fake_img, converted], 1)
         g_ema_temp2.eval()
         structure_img, _ = g_ema_temp2(structured, noise, grid_h_bpg, grid_w_bpg)
+        fake = make_duald_input(fake_img, structure_img, fake_crop_params, structure_crop_params, device)
         fake_pred = discriminator(fake, key)
         g_loss_structure = args.structure_loss2*g_structure_l2_loss(fake_img, structure_img, fake_crop_params, structure_crop_params)
         g_loss_main = g_nonsaturating_loss(fake_pred)
@@ -838,7 +874,7 @@ def ddp_worker(rank, world_size, args):
         synchronize()
 
     # args.n_mlp = 8
-    args.dis_input_size = 3 if args.img2dis else 5
+    args.dis_input_size = 6 if args.img2dis else 5
     print('img2dis', args.img2dis, 'dis_input_size', args.dis_input_size)
 
     args.start_iter = 0
@@ -1068,7 +1104,7 @@ if __name__ == '__main__':
         #     synchronize()
 
         # args.n_mlp = 8
-        args.dis_input_size = 3 if args.img2dis else 5
+        args.dis_input_size = 6 if args.img2dis else 5
         print('img2dis', args.img2dis, 'dis_input_size', args.dis_input_size)
 
         args.start_iter = 0
